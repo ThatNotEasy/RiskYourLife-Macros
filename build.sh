@@ -15,8 +15,8 @@ OUT_NAME="RyLM.exe"
 PRODUCT_NAME="RiskYourLife-Macros"
 FILE_DESC="RYL auto farming, ressing & hitting macros"
 COMPANY="Pari Malam"
-FILE_VER="1.0.0.0"      # must be 4-part
-PRODUCT_VER="1.0.0.0"   # make product version 4-part too
+FILE_VER="1.1"      # must be 4-part
+PRODUCT_VER="1.1"   # make product version 4-part too
 COPYRIGHT="(c) 2025 Pari Malam"
 
 NUITKA_FLAGS=(
