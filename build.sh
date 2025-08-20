@@ -4,10 +4,32 @@ set -euo pipefail
 # =========================
 # Config
 # =========================
-APP_NAME="main"                 # your entry script without .py
+APP_NAME="main"                 # entry script WITHOUT .py (i.e., main.py)
 PY_CMD="${PYTHON:-python}"      # override with: PYTHON=/path/to/python bash build.sh
 ICON="assets/rylm.ico"
-NUITKA_FLAGS=(--onefile --follow-imports --lto=yes --msvc=latest --windows-icon-from-ico="$ICON")
+
+# Output filename for the exe
+OUT_NAME="RyLM.exe"
+
+# Windows version info / metadata
+PRODUCT_NAME="RiskYourLife-Macros"
+FILE_DESC="RYL auto farming, ressing & hitting macros"
+COMPANY="Pari Malam"
+FILE_VER="1.0.0.0"      # must be 4-part
+PRODUCT_VER="1.0.0.0"   # make product version 4-part too
+COPYRIGHT="(c) 2025 Pari Malam"
+
+NUITKA_FLAGS=(
+  --onefile --follow-imports --lto=yes --msvc=latest
+  --windows-icon-from-ico="$ICON"
+  --windows-product-name="$PRODUCT_NAME"
+  --windows-file-description="$FILE_DESC"
+  --windows-company-name="$COMPANY"
+  --windows-file-version="$FILE_VER"
+  --windows-product-version="$PRODUCT_VER"
+  --copyright="$COPYRIGHT"
+  --output-filename="$OUT_NAME"
+)
 
 # =========================
 # Helpers (pretty output)
@@ -48,7 +70,8 @@ for path in \
   "${APP_NAME}.build" \
   "${APP_NAME}.dist" \
   "${APP_NAME}.onefile-build" \
-  "nuitka-crash-report.xml"
+  "nuitka-crash-report.xml" \
+  "$OUT_NAME"
 do
   if [[ -e "$path" ]]; then
     info "Removing: $path"
@@ -73,9 +96,8 @@ time "${BUILD_CMD[@]}"
 # =========================
 # Result
 # =========================
-if [[ -f "${APP_NAME}.exe" ]]; then
-  ok "Build succeeded → ./${APP_NAME}.exe"
+if [[ -f "$OUT_NAME" ]]; then
+  ok "Build succeeded → ./$OUT_NAME"
 else
-  # Nuitka sometimes places artifacts next to source; onefile should create ${APP_NAME}.exe
-  warn "EXE not found in current dir. Check for errors above or in *.dist/ folders."
+  warn "EXE not found as '$OUT_NAME'. Check for errors above or in *.dist/ folders."
 fi
