@@ -1,3 +1,4 @@
+# workers.py - fixed version
 import time
 import threading
 from modules.actions import *
@@ -13,10 +14,14 @@ class WorkerManager:
         self.loop_click_on = False
         self.loop_resser_on = False
         self.loop_combined_action_on = False
+        self.loop_skill_attack_on = False  # NEW
+        self.loop_auto_move_on = False     # NEW
         self.e_event = threading.Event()
         self.click_event = threading.Event()
         self.resser_event = threading.Event()
         self.combined_action_event = threading.Event()
+        self.skill_attack_event = threading.Event()  # NEW
+        self.auto_move_event = threading.Event()     # NEW
         
     def worker_combined_action(self):
         while True:
@@ -30,6 +35,54 @@ class WorkerManager:
             else:
                 time.sleep(0.05)
                 
+    def worker_skill_attack(self):
+        """Press number 2 + right click, then number 3 + right click, then number 4 + right click"""
+        while True:
+            if self.master_on and self.skill_attack_event.is_set():
+                # Number 2 + right click
+                tap_key_scancode(SC_2, hold_ms=15)
+                mouse_right_click_once(self.config['CLICK_DOWN_MS'])
+                time.sleep(self.config['CLICK_DELAY'])
+                
+                # Number 3 + right click
+                tap_key_scancode(SC_3, hold_ms=15)
+                mouse_right_click_once(self.config['CLICK_DOWN_MS'])
+                time.sleep(self.config['CLICK_DELAY'])
+                
+                # Number 4 + right click
+                tap_key_scancode(SC_4, hold_ms=15)
+                mouse_right_click_once(self.config['CLICK_DOWN_MS'])
+                time.sleep(self.config['CLICK_DELAY'])
+            else:
+                time.sleep(0.05)
+                
+    def worker_auto_move(self):
+        """Press A for 1.5s, S for 1.5s, D for 1.5s, then W once"""
+        while True:
+            if self.master_on and self.auto_move_event.is_set():
+                # Press A for 1.5 seconds
+                send_key_scancode(SC_A, True)
+                time.sleep(1.5)
+                send_key_scancode(SC_A, False)
+                time.sleep(0.1)
+                
+                # Press S for 1.5 seconds
+                send_key_scancode(SC_S, True)
+                time.sleep(1.5)
+                send_key_scancode(SC_S, False)
+                time.sleep(0.1)
+                
+                # Press D for 1.5 seconds
+                send_key_scancode(SC_D, True)
+                time.sleep(1.5)
+                send_key_scancode(SC_D, False)
+                time.sleep(0.1)
+                
+                # Press W once
+                tap_key_scancode(SC_W, hold_ms=15)
+                time.sleep(0.1)
+            else:
+                time.sleep(0.05)
                 
     def worker_e(self):
         while True:
@@ -47,10 +100,9 @@ class WorkerManager:
             else:
                 time.sleep(0.02)
                 
-                
     def worker_resser(self):
-        f_keys = [0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x43, 0x44]  
-        # F1–F10 scan codes (except F8 0x42)
+        f_keys = [0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43, 0x44]  
+        # F1–F10 scan codes (including F8 0x42)
         while True:
             if self.master_on and self.resser_event.is_set():
                 for sc in f_keys:
@@ -66,3 +118,5 @@ class WorkerManager:
         threading.Thread(target=self.worker_click, daemon=True).start()
         threading.Thread(target=self.worker_resser, daemon=True).start()
         threading.Thread(target=self.worker_combined_action, daemon=True).start()
+        threading.Thread(target=self.worker_skill_attack, daemon=True).start()  # NEW
+        threading.Thread(target=self.worker_auto_move, daemon=True).start()     # NEW

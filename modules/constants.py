@@ -1,0 +1,49 @@
+# modules/constants.py
+
+# Modifiers
+MOD_ALT = 0x0001
+MOD_CTRL = 0x0002
+
+# Virtual keys
+VK_HOME = 0x24
+VK_F1 = 0x70
+VK_F2 = 0x71
+VK_F10 = 0x79
+VK_Q = 0x51
+VK_SPACE = 0x20
+VK_TAB = 0x09
+VK_RETURN = 0x0D
+VK_ESCAPE = 0x1B
+VK_INSERT = 0x2D
+VK_DELETE = 0x2E
+VK_PRIOR = 0x21  # PAGEUP
+VK_NEXT = 0x22   # PAGEDOWN
+VK_UP = 0x26
+VK_DOWN = 0x28
+VK_LEFT = 0x25
+VK_RIGHT = 0x27
+VK_A = 0x41
+VK_S = 0x53
+VK_D = 0x44
+VK_W = 0x57
+
+# Hotkey IDs
+HK_TOGGLE_MASTER = 1001
+HK_TOGGLE_E = 1002
+HK_TOGGLE_CLICK = 1003
+HK_TOGGLE_AUTO_RESSER = 1005
+HK_TOGGLE_COMBINED_ACTION = 1006
+HK_TOGGLE_SKILL_ATTACK = 1008  # NEW: For ALT+3
+HK_TOGGLE_AUTO_MOVE = 1009     # NEW: For ALT+5
+HK_CONFIG_CHANGE = 1007
+HK_EXIT = 1004
+
+# Scan codes
+SC_SPACE = 0x39  # Jump (Spacebar)
+SC_2 = 0x03      # Number 2
+SC_3 = 0x04      # Number 3
+SC_4 = 0x05      # Number 4
+SC_A = 0x1E      # A key
+SC_S = 0x1F      # S key
+SC_D = 0x20      # D key
+SC_W = 0x11      # W key
