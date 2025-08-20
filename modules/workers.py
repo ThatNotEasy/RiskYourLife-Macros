@@ -1,6 +1,6 @@
 import time
 import threading
-from modules.actions import tap_key_scancode, mouse_left_click_once
+from modules.actions import *
 
 # Scan code for 'E' on US layout:
 SC_E = 0x12
@@ -12,10 +12,28 @@ class WorkerManager:
         self.loop_e_on = False
         self.loop_click_on = False
         self.loop_resser_on = False
+        self.loop_combined_action_on = False
         self.e_event = threading.Event()
         self.click_event = threading.Event()
         self.resser_event = threading.Event()
+        self.combined_action_event = threading.Event()
         
+    def worker_combined_action(self):
+        while True:
+            if self.master_on and self.combined_action_event.is_set():
+                # Perform the combined action (jump+click + number sequence)
+                from modules.actions import combined_jump_click_and_looping_number_sequence
+                combined_jump_click_and_looping_number_sequence(
+                    self.config['CLICK_DOWN_MS'],
+                    self.config['E_DELAY']
+                )
+                
+                # Small pause between full cycles
+                time.sleep(0.05)
+            else:
+                time.sleep(0.05)
+                
+                
     def worker_e(self):
         while True:
             if self.master_on and self.e_event.is_set():
@@ -50,3 +68,4 @@ class WorkerManager:
         threading.Thread(target=self.worker_e, daemon=True).start()
         threading.Thread(target=self.worker_click, daemon=True).start()
         threading.Thread(target=self.worker_resser, daemon=True).start()
+        threading.Thread(target=self.worker_combined_action, daemon=True).start()

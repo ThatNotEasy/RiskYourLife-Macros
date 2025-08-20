@@ -4,7 +4,7 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up
-from modules.clients import Colors, print_client_info, get_client_info_banner
+from modules.clients import Colors, print_client_info
 
 # Config
 CONFIG = {
@@ -29,6 +29,7 @@ class GameMacro:
             HK_TOGGLE_E: self.toggle_e,
             HK_TOGGLE_CLICK: self.toggle_click,
             HK_TOGGLE_AUTO_RESSER: self.toggle_resser,
+            HK_TOGGLE_COMBINED_ACTION: self.toggle_combined_action,
             HK_EXIT: self.exit_app
         }
     
@@ -40,30 +41,39 @@ class GameMacro:
         self.worker_manager.loop_e_on = not self.worker_manager.loop_e_on
         if self.worker_manager.loop_e_on:
             self.worker_manager.e_event.set()
-            p("[F1] E-Loop ON")
+            p("[ALT+1] E-Loop ON")
         else:
             self.worker_manager.e_event.clear()
-            p("[F1] E-Loop OFF")
-    
+            p("[ALT+1] E-Loop OFF")
+
     def toggle_click(self):
         self.worker_manager.loop_click_on = not self.worker_manager.loop_click_on
         if self.worker_manager.loop_click_on:
             self.worker_manager.click_event.set()
             mouse_left_up()  # safety: clear any stuck state before starting
-            p("[F2] Click-Loop ON")
+            p("[ALT+2] Click-Loop ON")
         else:
             self.worker_manager.click_event.clear()
             mouse_left_up()  # guarantee UP when stopping
-            p("[F2] Click-Loop OFF")
+            p("[ALT+2] Click-Loop OFF")
             
     def toggle_resser(self):
         self.worker_manager.loop_resser_on = not self.worker_manager.loop_resser_on
         if self.worker_manager.loop_resser_on:
             self.worker_manager.resser_event.set()
-            p("[F10] Auto Resser ON (F1–F10 loop)")
+            p("[ALT+3] Auto Resser ON (F1–F10 loop)")
         else:
             self.worker_manager.resser_event.clear()
-            p("[F10] Auto Resser OFF")
+            p("[ALT+3] Auto Resser OFF")
+
+    def toggle_combined_action(self):
+        self.worker_manager.loop_combined_action_on = not self.worker_manager.loop_combined_action_on
+        if self.worker_manager.loop_combined_action_on:
+            self.worker_manager.combined_action_event.set()
+            p("[ALT+4] Combined Action ON (Jump+Click + 2/3/4+RClick Loop)")
+        else:
+            self.worker_manager.combined_action_event.clear()
+            p("[ALT+4] Combined Action OFF")
     
     def exit_app(self):
         p("[EXIT] Bye!")
@@ -88,9 +98,10 @@ class GameMacro:
         # Hotkey data with consistent spacing
         hotkeys = [
             (f"{Colors.BRIGHT_YELLOW}HOME        {Colors.RESET}", "ON/OFF Macros", "On/Off Macros Mode"),
-            (f"{Colors.BRIGHT_YELLOW}F1          {Colors.RESET}", "Toggle E Press", "Press E key"),
-            (f"{Colors.BRIGHT_YELLOW}F2          {Colors.RESET}", "Toggle Auto-Click", "Left mouse click"),
-            (f"{Colors.BRIGHT_YELLOW}F10         {Colors.RESET}", "Auto Resser", "F1-F10 key rotation"),
+            (f"{Colors.BRIGHT_YELLOW}ALT+1       {Colors.RESET}", "Toggle E Press", "Auto Picker"),
+            (f"{Colors.BRIGHT_YELLOW}ALT+2       {Colors.RESET}", "Toggle Left Click", "Auto Hitting"),
+            (f"{Colors.BRIGHT_YELLOW}ALT+3       {Colors.RESET}", "F1-F10 key rotation", "Auto Resser"),
+            (f"{Colors.BRIGHT_YELLOW}AL+4        {Colors.RESET}", "Combined Action", "Auto Jump Skill"),  # Added
             (f"{Colors.BRIGHT_YELLOW}Ctrl+Alt+Q  {Colors.RESET}", "Exit Program", "Safe shutdown")
         ]
         
@@ -101,7 +112,7 @@ class GameMacro:
         print()
         
         # Status indicators
-        print(f"{Colors.BRIGHT_CYAN} Status: {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}E Press{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto-Click{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Resser{Colors.RESET}")
+        print(f"{Colors.BRIGHT_CYAN} Status: {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Picker{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Hitting{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Resser{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Jump Skill{Colors.RESET}")
         print()
         
         self.worker_manager.start_workers()
