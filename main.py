@@ -101,7 +101,7 @@ class GameMacro:
             (f"{Colors.BRIGHT_YELLOW}ALT+1       {Colors.RESET}", "Toggle E Press", "Auto Picker"),
             (f"{Colors.BRIGHT_YELLOW}ALT+2       {Colors.RESET}", "Toggle Left Click", "Auto Hitting"),
             (f"{Colors.BRIGHT_YELLOW}ALT+3       {Colors.RESET}", "F1-F10 key rotate", "Auto Resser"),
-            (f"{Colors.BRIGHT_YELLOW}ALT+4        {Colors.RESET}", "Combined Action", "Auto Jump Skill"),  # Added
+            (f"{Colors.BRIGHT_YELLOW}ALT+4       {Colors.RESET}", "Combined Action", "Jump Attack"),  # Added
             (f"{Colors.BRIGHT_YELLOW}Ctrl+Alt+Q  {Colors.RESET}", "Exit Program", "Safe shutdown")
         ]
         
@@ -112,7 +112,7 @@ class GameMacro:
         print()
         
         # Status indicators
-        print(f"{Colors.BRIGHT_CYAN} Status: {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Picker{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Hitting{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Resser{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Jump Skill{Colors.RESET}")
+        print(f"{Colors.BRIGHT_CYAN} Status: {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Picker{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Hitting{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Resser{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Jump Attack{Colors.RESET}")
         print()
         
         self.worker_manager.start_workers()
