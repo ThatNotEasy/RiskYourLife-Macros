@@ -1,7 +1,9 @@
 # workers.py - fixed version
+# workers.py - fixed version
 import time
 import threading
 from modules.actions import *
+from modules.constants import SC_A, SC_S, SC_D, SC_W  # A
 
 # Scan code for 'E' on US layout:
 SC_E = 0x12
@@ -57,29 +59,19 @@ class WorkerManager:
                 time.sleep(0.05)
                 
     def worker_auto_move(self):
-        """Press A for 1.5s, S for 1.5s, D for 1.5s, then W once"""
+        """Press A for 1.5s, then D for 1.5s, and repeat continuously"""
         while True:
             if self.master_on and self.auto_move_event.is_set():
-                # Press A for 1.5 seconds
+                # Press A for 1.5 seconds (move left)
                 send_key_scancode(SC_A, True)
                 time.sleep(1.5)
                 send_key_scancode(SC_A, False)
                 time.sleep(0.1)
                 
-                # Press S for 1.5 seconds
-                send_key_scancode(SC_S, True)
-                time.sleep(1.5)
-                send_key_scancode(SC_S, False)
-                time.sleep(0.1)
-                
-                # Press D for 1.5 seconds
+                # Press D for 1.5 seconds (move right)
                 send_key_scancode(SC_D, True)
                 time.sleep(1.5)
                 send_key_scancode(SC_D, False)
-                time.sleep(0.1)
-                
-                # Press W once
-                tap_key_scancode(SC_W, hold_ms=15)
                 time.sleep(0.1)
             else:
                 time.sleep(0.05)
