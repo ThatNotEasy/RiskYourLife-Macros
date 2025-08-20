@@ -27,3 +27,6 @@ For any issues, questions, or suggestions, feel free to reach out through the [o
 
 https://github.com/user-attachments/assets/533ba709-d6c8-4031-9a79-c922a2437c29
 
+For more details or support,
+- 🧵 **Telegram**: [@SurprseMTFK](https://t.me/@SurprseMTFK)  
+- 💬 **Discord**: `kwafeltz`
