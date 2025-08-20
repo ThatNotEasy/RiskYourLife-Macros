@@ -4,3 +4,4 @@ build
 venv
 main.exe
 nuitka-crash-report.xml
+RyLM.exe
