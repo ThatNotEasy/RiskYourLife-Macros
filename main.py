@@ -4,7 +4,7 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up
-from modules.clients import print_client_info, get_client_info_banner
+from modules.clients import Colors, print_client_info, get_client_info_banner
 
 # Config
 CONFIG = {
@@ -71,17 +71,38 @@ class GameMacro:
     
     def run(self):
         ensure_admin()
-        p("==== Game Macro (SendInput) ====")
-        p("[HOME] Master ON/OFF")
-        p("[F1]   Toggle loop press 'E'")
-        p("[F2]   Toggle loop left-click")
-        p("[F10]  Toggle Auto Resser (F1–F10 loop)")
-        p("[Ctrl+Alt+Q] Exit")
-        p("================================")
-        
-        # Display client information automatically
-        p(get_client_info_banner())
+        clear_and_print()  # Clear screen and show banner
         print_client_info()
+        
+        # Beautiful hotkey information display
+        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'=' * 60}{Colors.RESET}")
+        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{' GAME MACRO - HOTKEYS '.center(60)}{Colors.RESET}")
+        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'=' * 60}{Colors.RESET}")
+        print()
+        
+        # Hotkey table with perfect alignment
+        print(f"{Colors.BRIGHT_MAGENTA}╔══════════════╦════════════════════╦══════════════════════╗{Colors.RESET}")
+        print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'HOTKEY':<12} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'ACTION':<18} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{'DESCRIPTION':<20} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
+        print(f"{Colors.BRIGHT_MAGENTA}╠══════════════╬════════════════════╬══════════════════════╣{Colors.RESET}")
+        
+        # Hotkey data with consistent spacing
+        hotkeys = [
+            (f"{Colors.BRIGHT_YELLOW}HOME        {Colors.RESET}", "ON/OFF Macros", "On/Off Macros Mode"),
+            (f"{Colors.BRIGHT_YELLOW}F1          {Colors.RESET}", "Toggle E Press", "Press E key"),
+            (f"{Colors.BRIGHT_YELLOW}F2          {Colors.RESET}", "Toggle Auto-Click", "Left mouse click"),
+            (f"{Colors.BRIGHT_YELLOW}F10         {Colors.RESET}", "Auto Resser", "F1-F10 key rotation"),
+            (f"{Colors.BRIGHT_YELLOW}Ctrl+Alt+Q  {Colors.RESET}", "Exit Program", "Safe shutdown")
+        ]
+        
+        for key, action, desc in hotkeys:
+            print(f"{Colors.BRIGHT_MAGENTA}║ {key:<12} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{action:<18} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{desc:<20} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
+        
+        print(f"{Colors.BRIGHT_MAGENTA}╚══════════════╩════════════════════╩══════════════════════╝{Colors.RESET}")
+        print()
+        
+        # Status indicators
+        print(f"{Colors.BRIGHT_CYAN} Status: {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}E Press{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto-Click{Colors.RESET}  {Colors.BRIGHT_RED}●{Colors.RESET} {Colors.BRIGHT_WHITE}Auto Resser{Colors.RESET}")
+        print()
         
         self.worker_manager.start_workers()
         register_hotkeys()
@@ -92,6 +113,5 @@ class GameMacro:
             mouse_left_up()  # final safety
 
 if __name__ == "__main__":
-    clear_and_print()
     app = GameMacro()
     app.run()
