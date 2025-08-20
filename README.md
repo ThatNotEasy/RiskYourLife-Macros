@@ -24,3 +24,6 @@
 For any issues, questions, or suggestions, feel free to reach out through the [official support channel] or [Discord community link].
 
 ## ⚔️ **Start automating and level up your RYL experience today!**
+
+https://github.com/user-attachments/assets/533ba709-d6c8-4031-9a79-c922a2437c29
+
