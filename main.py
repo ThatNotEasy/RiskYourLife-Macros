@@ -4,6 +4,7 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up
+from modules.clients import print_client_info, get_client_info_banner
 
 # Config
 CONFIG = {
@@ -74,9 +75,13 @@ class GameMacro:
         p("[HOME] Master ON/OFF")
         p("[F1]   Toggle loop press 'E'")
         p("[F2]   Toggle loop left-click")
-        p("[F10]  Toggle Auto Resser (F1–F10 loop)")  # <-- new
+        p("[F10]  Toggle Auto Resser (F1–F10 loop)")
         p("[Ctrl+Alt+Q] Exit")
         p("================================")
+        
+        # Display client information automatically
+        p(get_client_info_banner())
+        print_client_info()
         
         self.worker_manager.start_workers()
         register_hotkeys()

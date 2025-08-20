@@ -2,3 +2,5 @@ main.build
 main.dist
 build
 venv
+main.exe
+nuitka-crash-report.xml
