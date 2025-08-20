@@ -21,15 +21,12 @@ class WorkerManager:
     def worker_combined_action(self):
         while True:
             if self.master_on and self.combined_action_event.is_set():
-                # Perform the combined action (jump+click + number sequence)
-                from modules.actions import combined_jump_click_and_looping_number_sequence
-                combined_jump_click_and_looping_number_sequence(
-                    self.config['CLICK_DOWN_MS'],
-                    self.config['E_DELAY']
-                )
+                # Perform the combined action (hold spacebar + left click)
+                from modules.actions import combined_jump_click
+                combined_jump_click(self.config['CLICK_DOWN_MS'])
                 
-                # Small pause between full cycles
-                time.sleep(0.05)
+                # Small pause between actions
+                time.sleep(self.config['CLICK_DELAY'])
             else:
                 time.sleep(0.05)
                 
