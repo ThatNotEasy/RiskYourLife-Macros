@@ -1,11 +1,13 @@
 # main.py - fixed version
 import threading
+import time
+import psutil
 from modules.banners import clear_and_print
 from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up
-from modules.clients import Colors, print_client_info
+from modules.clients import Colors, print_client_info, launch_ryl
 from modules.config import parse_hotkey_string, save_config, load_config
 
 # Config
@@ -21,13 +23,36 @@ def p(msg):
         print(msg, flush=True)
 
 def status_indicator(is_on):
-    return f"{Colors.BRIGHT_GREEN}●{Colors.RESET}" if is_on else f"{Colors.BRIGHT_RED}●{Colors.RESET}"
+    return f"{Colors.BRIGHT_GREEN} ●{Colors.RESET}" if is_on else f"{Colors.BRIGHT_RED} ●{Colors.RESET}"
+
+def is_game_running():
+    """
+    Check if MiniA.bin or other game processes are running
+    Returns: (is_running, process_name, display_name) tuple
+    """
+    # Map process names to display names
+    process_map = {
+        'minia.bin': 'RYL2 Return Of Comeback [ROC]',
+        'minia.exe': 'RYL2 Return Of Comeback [ROC]', 
+        'client.exe': 'RYL2 Return Of Comeback [ROC]',
+        'ryiclient.exe': 'RYL2 Return Of Comeback [ROC]'
+    }
+    
+    target_processes = list(process_map.keys())
+    for proc in psutil.process_iter(['name']):
+        if proc.info['name']:
+            proc_name_lower = proc.info['name'].lower()
+            if proc_name_lower in target_processes:
+                display_name = process_map[proc_name_lower]
+                return True, proc.info['name'], display_name
+    return False, None, "RYL2 Return Of Comeback [ROC]"
 
 class GameMacro:
     def __init__(self):
         self.worker_manager = WorkerManager(CONFIG)
         self.config = load_config()
         self.setup_callbacks()
+        self.game_found = False  # Track if game has been found
         
     def setup_callbacks(self):
         self.callbacks = {
@@ -43,15 +68,28 @@ class GameMacro:
         }
         
     def build_status_line(self):
+        if not self.game_found:
+            # Only check for game if not already found
+            game_running, process_name, display_name = is_game_running()
+            if game_running:
+                self.game_found = True
+        else:
+            # Game already found, use cached values
+            game_running = True
+            display_name = 'RYL2 Return Of Comeback [ROC]'  # Use the mapped name
+        
+        game_status = f"{Colors.BRIGHT_GREEN} ●{Colors.RESET}" if game_running else f"{Colors.BRIGHT_RED} ●{Colors.RESET}"
+        
         return (
             f"{Colors.BRIGHT_CYAN} Status: "
-            f"{status_indicator(self.worker_manager.master_on)} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  \n\n"
-            f"{status_indicator(self.worker_manager.loop_e_on)} {Colors.BRIGHT_WHITE}  Auto Picker{Colors.RESET}  "
-            f"{status_indicator(self.worker_manager.loop_click_on)} {Colors.BRIGHT_WHITE}  Auto Hitting{Colors.RESET}  "
-            f"{status_indicator(self.worker_manager.loop_skill_attack_on)} {Colors.BRIGHT_WHITE}  Auto Skill Attack{Colors.RESET}  "  # NEW
-            f"{status_indicator(self.worker_manager.loop_combined_action_on)} {Colors.BRIGHT_WHITE}  Auto Jump Attack{Colors.RESET}  "
-            f"{status_indicator(self.worker_manager.loop_auto_move_on)} {Colors.BRIGHT_WHITE}  Auto Move{Colors.RESET}  "  # NEW
-            f"{status_indicator(self.worker_manager.loop_resser_on)} {Colors.BRIGHT_WHITE}  Auto Resser{Colors.RESET}\n\n"
+            f"{status_indicator(self.worker_manager.master_on)} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  "
+            f"{game_status} {Colors.BRIGHT_WHITE}{display_name}{Colors.RESET}  \n\n"
+            f"{status_indicator(self.worker_manager.loop_e_on)} {Colors.BRIGHT_WHITE} Auto Picker{Colors.RESET}  "
+            f"{status_indicator(self.worker_manager.loop_click_on)} {Colors.BRIGHT_WHITE} Auto Hitting{Colors.RESET}  "
+            f"{status_indicator(self.worker_manager.loop_skill_attack_on)} {Colors.BRIGHT_WHITE} Auto Skill Attack{Colors.RESET}  "  # NEW
+            f"{status_indicator(self.worker_manager.loop_combined_action_on)} {Colors.BRIGHT_WHITE} Auto Jump Attack{Colors.RESET}  "
+            f"{status_indicator(self.worker_manager.loop_auto_move_on)} {Colors.BRIGHT_WHITE} Auto Move{Colors.RESET}  "  # NEW
+            f"{status_indicator(self.worker_manager.loop_resser_on)} {Colors.BRIGHT_WHITE} Auto Resser{Colors.RESET}\n\n"
         )
 
     def render_status(self):
@@ -71,7 +109,7 @@ class GameMacro:
         
         # Configuration table with perfect alignment
         print(f"{Colors.BRIGHT_MAGENTA}╔══════╦════════════════════════════════════╦══════════════════════╗{Colors.RESET}")
-        print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'OPTION':<4} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'FUNCTION':<38} {Colors.BRIGHT_MAGENTa}  ║ {Colors.BRIGHT_WHITE}{'CURRENT HOTKEY':<20} {Colors.BRIGHT_MAGENTA}  ║{Colors.RESET}")
+        print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'OPTION':<4} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'FUNCTION':<38} {Colors.BRIGHT_MAGENTA}  ║ {Colors.BRIGHT_WHITE}{'CURRENT HOTKEY':<20} {Colors.BRIGHT_MAGENTA}  ║{Colors.RESET}")
         print(f"{Colors.BRIGHT_MAGENTA}╠══════╬════════════════════════════════════╬══════════════════════╣{Colors.RESET}")
         
         # Configuration options with consistent spacing
@@ -127,7 +165,7 @@ class GameMacro:
                         parse_hotkey_string(new_value)
                         self.config['RiskYourLife-Macros'][config_key] = new_value
                         save_config(self.config)
-                        print(f"\n{Colors.BRIGHT_GREEN}✓ Hotkey updated successfully!{Colors.RESET}")
+                        print(f"\n{Colors.BRIGHT_GREEN}Hotkey updated successfully!{Colors.RESET}")
                         print(f"{Colors.BRIGHT_YELLOW}Please restart the application for changes to take effect.{Colors.RESET}")
                         
                         # Ask if user wants to continue editing
@@ -136,21 +174,21 @@ class GameMacro:
                             self.change_config()  # Recursive call to show menu again
                         
                     except Exception as e:
-                        print(f"\n{Colors.BRIGHT_RED}✗ Error: {e}{Colors.RESET}")
+                        print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
                         print(f"{Colors.BRIGHT_YELLOW}Please try again with a valid hotkey format.{Colors.RESET}")
                         input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
                         self.change_config()  # Restart the config menu
                 else:
-                    print(f"\n{Colors.BRIGHT_RED}✗ No value entered, keeping current setting.{Colors.RESET}")
+                    print(f"\n{Colors.BRIGHT_RED}No value entered, keeping current setting.{Colors.RESET}")
                     input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
                     self.change_config()  # Restart the config menu
             else:
-                print(f"\n{Colors.BRIGHT_RED}✗ Invalid choice.{Colors.RESET}")
+                print(f"\n{Colors.BRIGHT_RED}Invalid choice.{Colors.RESET}")
                 input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
                 self.change_config()  # Restart the config menu
                 
         except Exception as e:
-            print(f"\n{Colors.BRIGHT_RED}✗ Error: {e}{Colors.RESET}")
+            print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
             input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
             self.change_config()  # Restart the config menu
     
@@ -265,6 +303,43 @@ class GameMacro:
         # Status indicators
         self.render_status()
         print()
+        
+        game_running, process_name, display_name = is_game_running()
+        if game_running:
+            self.game_found = True
+            print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}{display_name} is already running! Macros are ready to use.{Colors.RESET}\n")
+        else:
+            print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}RYL is launching, please be patient, it may take a moment.{Colors.RESET}")
+            launch_ryl()
+            
+            time.sleep(3)
+            game_running, process_name, display_name = is_game_running()
+            if game_running:
+                self.game_found = True
+                print(f"{Colors.BRIGHT_GREEN}{display_name} detected! Macros are ready to use.{Colors.RESET}\n")
+            else:
+                print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_RED}RYL process is not detected. Make sure the game is running for macros to work.{Colors.RESET}\n")
+        
+        def game_monitor():
+            check_count = 0
+            max_checks = 12
+            
+            while check_count < max_checks and not self.game_found:
+                time.sleep(5)
+                check_count += 1
+                
+                if not self.game_found:
+                    game_running, process_name, display_name = is_game_running()
+                    if game_running:
+                        self.game_found = True
+                        # print(f"{Colors.BRIGHT_YELLOW}[INFO]: {Colors.BRIGHT_GREEN}RYL process detected after {check_count * 5} seconds!{Colors.RESET}")
+                
+                self.render_status()
+            
+            if not self.game_found:
+                print(f"{Colors.BRIGHT_YELLOW}[INFO]: RYL process not detected after 1 minute. Status checks stopped.{Colors.RESET}")
+        
+        threading.Thread(target=game_monitor, daemon=True).start()
         
         self.worker_manager.start_workers()
         register_hotkeys()
