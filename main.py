@@ -100,8 +100,8 @@ class GameMacro:
             (f"{Colors.BRIGHT_YELLOW}HOME        {Colors.RESET}", "ON/OFF Macros", "On/Off Macros Mode"),
             (f"{Colors.BRIGHT_YELLOW}ALT+1       {Colors.RESET}", "Toggle E Press", "Auto Picker"),
             (f"{Colors.BRIGHT_YELLOW}ALT+2       {Colors.RESET}", "Toggle Left Click", "Auto Hitting"),
-            (f"{Colors.BRIGHT_YELLOW}ALT+3       {Colors.RESET}", "F1-F10 key rotation", "Auto Resser"),
-            (f"{Colors.BRIGHT_YELLOW}AL+4        {Colors.RESET}", "Combined Action", "Auto Jump Skill"),  # Added
+            (f"{Colors.BRIGHT_YELLOW}ALT+3       {Colors.RESET}", "F1-F10 key rotate", "Auto Resser"),
+            (f"{Colors.BRIGHT_YELLOW}ALT+4        {Colors.RESET}", "Combined Action", "Auto Jump Skill"),  # Added
             (f"{Colors.BRIGHT_YELLOW}Ctrl+Alt+Q  {Colors.RESET}", "Exit Program", "Safe shutdown")
         ]
         
