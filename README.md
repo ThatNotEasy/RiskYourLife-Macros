@@ -1,17 +1,15 @@
-# RiskYourLife-Macros – Auto Farming, Ressing & Hitting
+# RiskYourLife-Macros – Automation Hotkeys
 
 **RiskYourLife-Macros** is a powerful automation script designed for **Risk Your Life (RYL)** players who want to automate repetitive tasks like farming, resurrection, and combat, allowing you to focus more on the strategic and fun aspects of the game.
 
-## ⚙️ Core Features:
+## ⚙️ Core Features (Farm Mode):
 
-### 🌾 **Auto Farming**
-- **Automated Mob Attacks** – The script automatically targets and attacks mobs, collecting loot and repeating the cycle to maximize your farming efficiency. Level up faster and earn gold without manually grinding.
-
-### 💀 **Auto Ressing**
-- **Instant Resurrection** – No more waiting to respawn! The script detects when your character dies and automatically performs a resurrection, so you stay in the action without missing a beat.
-
-### 🗡️ **Auto Hitting**
-- **Continuous Attacks & Skills** – The macro ensures your character attacks and uses skills in a continuous loop, with precise timing, improving your PvE and PvP performance.
+### 🌾 **Farming Mode**
+- **Auto Picker** – Automatically collects items, drops, and loot from mobs without you needing to click manually. Never miss out on valuable resources again.
+- **Auto Hitting** – The macro ensures your character attacks continuously in a loop, with precise timing, improving your farming mode performance.
+- **Auto Skill Attack** – Automatically triggers your character’s skills when available, maximizing DPS and ensuring efficient mob clearing.
+- **Auto Jump Attack** – Executes repeated jump attacks to deal extra damage, dodge enemy skills, and maintain aggressive combat flow.
+- **Auto Ressing** – No more waiting to respawn! The script detects when your character dies and automatically performs a resurrection, so you stay in the action without missing a beat.
 
 ## 🛠️ Requirements:
 - **Risk Your Life (RYL)** – You need an active game client.
