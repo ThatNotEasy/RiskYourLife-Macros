@@ -66,14 +66,15 @@ fi
 # =========================
 # Clean previous builds
 # =========================
+ARCHIVE_NAME="RiskYourLife-Macros_V${FILE_VER}.zip"
+
 for path in \
   "${APP_NAME}.build" \
   "${APP_NAME}.dist" \
-  "$OUT_NAME" \
-  "$ARCHIVE_NAME="RiskYourLife-Macros_V${FILE_VER}.zip"
   "${APP_NAME}.onefile-build" \
   "nuitka-crash-report.xml" \
-  "$OUT_NAME"
+  "$OUT_NAME" \
+  "$ARCHIVE_NAME"
 do
   if [[ -e "$path" ]]; then
     info "Removing: $path"
@@ -102,20 +103,19 @@ if [[ -f "$OUT_NAME" ]]; then
   ok "Build succeeded → ./$OUT_NAME"
 
   # Create versioned zip archive
-  ARCHIVE_NAME="RiskYourLife-Macros_V${FILE_VER}.zip"
-
   info "Creating archive: $ARCHIVE_NAME"
 
-  # Use zip command
-  if command -v zip >/dev/null 2>&1; then
-    zip -r "$ARCHIVE_NAME" "$OUT_NAME"
+  # Use 7z command
+  if command -v 7z >/dev/null 2>&1; then
+    7z a "$ARCHIVE_NAME" "$OUT_NAME"
     if [[ -f "$ARCHIVE_NAME" ]]; then
       ok "Archive created → ./$ARCHIVE_NAME"
     else
       warn "Failed to create archive"
     fi
   else
-    warn "zip command not found. Skipping archive creation."
+    warn "7z command not found. Skipping archive creation."
+    warn "Install 7-Zip and make sure 7z is in your PATH."
   fi
 else
   warn "EXE not found as '$OUT_NAME'. Check for errors above or in *.dist/ folders."

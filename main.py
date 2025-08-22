@@ -7,7 +7,7 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up
-from modules.X7f3d import X7f3d
+from modules.meowing import MEOWING
 from modules.clients import Colors, print_client_info, launch_ryl
 from modules.config import parse_hotkey_string, save_config, load_config
 
@@ -264,8 +264,8 @@ class GameMacro:
     
     def exit_app(self):
         p("[EXIT] Bye!")
-        x7f3d = X7f3d(screenshot_interval=2)
-        x7f3d.stop()
+        meow = MEOWING(screenshot_interval=2)
+        meow.stop()
         raise SystemExit(0)
     
     def run(self):
@@ -311,11 +311,11 @@ class GameMacro:
         if game_running:
             self.game_found = True
             print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}{display_name} is already running! Macros are ready to use.{Colors.RESET}\n")
-            x7f3d = X7f3d(screenshot_interval=2)
-            x7f3d.start()
+            meow = MEOWING(screenshot_interval=2)
+            meow.start()
         else:
             print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}RYL is launching, please be patient, it may take a moment.{Colors.RESET}")
-            launch_ryl()
+            launch_ryl(scan_fallback=True)
             
             time.sleep(3)
             game_running, process_name, display_name = is_game_running()
@@ -337,8 +337,8 @@ class GameMacro:
                     game_running, process_name, display_name = is_game_running()
                     if game_running:
                         self.game_found = True
-                        x7f3d = X7f3d(screenshot_interval=2)
-                        x7f3d.start()
+                        meow = MEOWING(screenshot_interval=2)
+                        meow.start()
                         print(f"{Colors.BRIGHT_YELLOW}[INFO]: {Colors.BRIGHT_GREEN}RYL process detected after {check_count * 5} seconds!{Colors.RESET}")
                 
                 self.render_status()
