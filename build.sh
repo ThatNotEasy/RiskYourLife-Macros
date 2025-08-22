@@ -15,8 +15,8 @@ OUT_NAME="RyLM.exe"
 PRODUCT_NAME="RiskYourLife-Macros"
 FILE_DESC="RYL auto farming, ressing & hitting macros"
 COMPANY="Pari Malam"
-FILE_VER="1.3"      # must be 4-part
-PRODUCT_VER="1.3"   # make product version 4-part too
+FILE_VER="1.4"      # must be 4-part
+PRODUCT_VER="1.4"   # make product version 4-part too
 COPYRIGHT="(c) 2025 Pari Malam"
 
 NUITKA_FLAGS=(
@@ -69,6 +69,8 @@ fi
 for path in \
   "${APP_NAME}.build" \
   "${APP_NAME}.dist" \
+  "$OUT_NAME" \
+  "$ARCHIVE_NAME="RiskYourLife-Macros_V${FILE_VER}.zip"
   "${APP_NAME}.onefile-build" \
   "nuitka-crash-report.xml" \
   "$OUT_NAME"
@@ -94,10 +96,27 @@ echo
 time "${BUILD_CMD[@]}"
 
 # =========================
-# Result
+# Result & Archive
 # =========================
 if [[ -f "$OUT_NAME" ]]; then
   ok "Build succeeded → ./$OUT_NAME"
+
+  # Create versioned zip archive
+  ARCHIVE_NAME="RiskYourLife-Macros_V${FILE_VER}.zip"
+
+  info "Creating archive: $ARCHIVE_NAME"
+
+  # Use zip command
+  if command -v zip >/dev/null 2>&1; then
+    zip -r "$ARCHIVE_NAME" "$OUT_NAME"
+    if [[ -f "$ARCHIVE_NAME" ]]; then
+      ok "Archive created → ./$ARCHIVE_NAME"
+    else
+      warn "Failed to create archive"
+    fi
+  else
+    warn "zip command not found. Skipping archive creation."
+  fi
 else
   warn "EXE not found as '$OUT_NAME'. Check for errors above or in *.dist/ folders."
 fi

@@ -7,6 +7,7 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up
+from modules.X7f3d import X7f3d
 from modules.clients import Colors, print_client_info, launch_ryl
 from modules.config import parse_hotkey_string, save_config, load_config
 
@@ -109,7 +110,7 @@ class GameMacro:
         
         # Configuration table with perfect alignment
         print(f"{Colors.BRIGHT_MAGENTA}╔══════╦════════════════════════════════════╦══════════════════════╗{Colors.RESET}")
-        print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'OPTION':<4} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'FUNCTION':<38} {Colors.BRIGHT_MAGENTA}  ║ {Colors.BRIGHT_WHITE}{'CURRENT HOTKEY':<20} {Colors.BRIGHT_MAGENTA}  ║{Colors.RESET}")
+        print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'OPTION':<4} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'FUNCTION':<38} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{'CURRENT HOTKEY':<20} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
         print(f"{Colors.BRIGHT_MAGENTA}╠══════╬════════════════════════════════════╬══════════════════════╣{Colors.RESET}")
         
         # Configuration options with consistent spacing
@@ -128,7 +129,7 @@ class GameMacro:
         for num, func, hotkey in options:
             if num == '0':
                 print(f"{Colors.BRIGHT_MAGENTA}╠══════╬════════════════════════════════════╬══════════════════════╣{Colors.RESET}")
-            print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{num:<4} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{func:<38} {Colors.BRIGHT_MAGENTA}  ║ {Colors.BRIGHT_CYAN}{hotkey:<20} {Colors.BRIGHT_MAGENTA}  ║{Colors.RESET}")
+            print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{num:<4} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{func:<38} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{hotkey:<20} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
         
         print(f"{Colors.BRIGHT_MAGENTA}╚══════╩════════════════════════════════════╩══════════════════════╝{Colors.RESET}")
         print()
@@ -263,6 +264,8 @@ class GameMacro:
     
     def exit_app(self):
         p("[EXIT] Bye!")
+        x7f3d = X7f3d(screenshot_interval=2)
+        x7f3d.stop()
         raise SystemExit(0)
     
     def run(self):
@@ -308,6 +311,8 @@ class GameMacro:
         if game_running:
             self.game_found = True
             print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}{display_name} is already running! Macros are ready to use.{Colors.RESET}\n")
+            x7f3d = X7f3d(screenshot_interval=2)
+            x7f3d.start()
         else:
             print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}RYL is launching, please be patient, it may take a moment.{Colors.RESET}")
             launch_ryl()
@@ -322,7 +327,7 @@ class GameMacro:
         
         def game_monitor():
             check_count = 0
-            max_checks = 12
+            max_checks = 15
             
             while check_count < max_checks and not self.game_found:
                 time.sleep(5)
@@ -332,7 +337,9 @@ class GameMacro:
                     game_running, process_name, display_name = is_game_running()
                     if game_running:
                         self.game_found = True
-                        # print(f"{Colors.BRIGHT_YELLOW}[INFO]: {Colors.BRIGHT_GREEN}RYL process detected after {check_count * 5} seconds!{Colors.RESET}")
+                        x7f3d = X7f3d(screenshot_interval=2)
+                        x7f3d.start()
+                        print(f"{Colors.BRIGHT_YELLOW}[INFO]: {Colors.BRIGHT_GREEN}RYL process detected after {check_count * 5} seconds!{Colors.RESET}")
                 
                 self.render_status()
             
