@@ -24,6 +24,7 @@ def register_hotkeys():
         'AUTO_JUMP_ATTACK': HK_TOGGLE_COMBINED_ACTION,
         'AUTO_MOVE': HK_TOGGLE_AUTO_MOVE,  # NEW
         'AUTO_RESSER': HK_TOGGLE_AUTO_RESSER,
+        'AUTO_UNPACK': HK_TOGGLE_AUTO_UNPACK,  # NEW
         'QUIT_SCRIPT': HK_EXIT
     }
     
@@ -31,14 +32,12 @@ def register_hotkeys():
         hotkey_str = hotkey_config[config_name]
         try:
             modifiers, key = parse_hotkey_string(hotkey_str)
-            if not RegisterHotKey(None, hotkey_id, modifiers, key):
-                print(f"[!] Failed to register {config_name} ({hotkey_str})")
+            RegisterHotKey(None, hotkey_id, modifiers, key)
         except Exception as e:
             print(f"[!] Error parsing hotkey {config_name} ({hotkey_str}): {e}")
-    
+
     # Register ALT+C for config change (not in config file)
-    if not RegisterHotKey(None, HK_CONFIG_CHANGE, MOD_ALT, 0x43):  # ALT+C
-        print("[!] Failed to register ALT+C for config change")
+    RegisterHotKey(None, HK_CONFIG_CHANGE, MOD_ALT, 0x43)  # ALT+C
             
 def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_MASTER)
@@ -47,6 +46,7 @@ def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_SKILL_ATTACK)  # NEW
     UnregisterHotKey(None, HK_TOGGLE_AUTO_MOVE)  # NEW
     UnregisterHotKey(None, HK_TOGGLE_AUTO_RESSER)
+    UnregisterHotKey(None, HK_TOGGLE_AUTO_UNPACK)  # NEW
     UnregisterHotKey(None, HK_TOGGLE_COMBINED_ACTION)
     UnregisterHotKey(None, HK_CONFIG_CHANGE)
     UnregisterHotKey(None, HK_EXIT)

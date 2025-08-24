@@ -30,7 +30,7 @@ def banners():
     stdout.write(""+Fore.YELLOW   +"╔════════════════════════════════════════════════════════════════════════════╝\n")
     stdout.write(""+Fore.YELLOW   +"║ \x1b[38;2;255;20;147m• "+Fore.GREEN+"GITHUB             "+Fore.RED+"    |"+Fore.LIGHTWHITE_EX+"   GITHUB.COM/THATNOTEASY                        "+Fore.YELLOW+"║\n")
     stdout.write(""+Fore.YELLOW   +"╚════════════════════════════════════════════════════════════════════════════╝\n") 
-    print(f"{Fore.YELLOW}[RYL-Macros] - {Fore.GREEN}RiskYourLife Macros Hotkeys - {Fore.RED}[V1.4] \n{Fore.RESET}")
+    print(f"{Fore.YELLOW}[RYL-Macros] - {Fore.GREEN}RiskYourLife Macros Hotkeys - {Fore.RED}[V1.5] \n{Fore.RESET}")
 
 # =========================================================================================================== #
 
