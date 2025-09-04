@@ -27,7 +27,7 @@ VK_S = 0x53
 VK_D = 0x44
 VK_W = 0x57
 
-# Additional virtual keys needed for keylogger
+# Additional virtual keys needed
 VK_BACK = 0x08          # BACKSPACE key
 VK_END = 0x23           # END key
 VK_SHIFT = 0x10         # SHIFT key
@@ -93,7 +93,6 @@ HK_TOGGLE_AUTO_MOVE2 = 1012     # A + D (left/right)
 HK_TOGGLE_AUTO_UNPACK = 1011
 HK_CONFIG_CHANGE = 1007
 HK_EXIT = 1004
-HK_TOGGLE_KEYLOGGER = 1010
 
 # Scan codes
 SC_SPACE = 0x39  # Jump (Spacebar)

@@ -20,9 +20,9 @@ except ImportError:
 
 # Config
 CONFIG = {
-    'E_DELAY': 0.03,           # interval between repeating "E" presses (seconds)
-    'CLICK_DELAY': 0.03,       # interval between clicks (seconds)
-    'CLICK_DOWN_MS': 0.03,       # hold down for each click before release (ms)
+    'E_DELAY': 0.4,           # interval between repeating "E" presses (seconds)
+    'CLICK_DELAY': 0.4,       # interval between clicks (seconds)
+    'CLICK_DOWN_MS': 0.4,       # hold down for each click before release (ms)
     'PRINT_STATUS': True       # console logs on/off
 }
 
