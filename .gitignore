@@ -3,9 +3,8 @@ main.dist
 main.onefile-build
 build
 venv
-main.exe
 nuitka-crash-report.xml
-RyLM.exe
+RiskYourLife-Macros.exe
 RiskYourLife-Macros_V1.6.zip
 modules/antidebug.py
 modules/clients.py
