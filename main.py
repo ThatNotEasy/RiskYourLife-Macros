@@ -154,7 +154,7 @@ class GameMacro:
                 ('6', 'Auto Move W+S', self.config['RiskYourLife-Macros']['AUTO_MOVE']),
                 ('7', 'Auto Move A+D', self.config['RiskYourLife-Macros']['AUTO_MOVE2']),
                 ('8', 'Auto Resser', self.config['RiskYourLife-Macros']['AUTO_RESSER']),
-                ('9', 'Auto Unpack Gold', self.config['RiskYourLife-Macros']['AUTO_UNPACK']),
+                ('9', 'Auto Unpack', self.config['RiskYourLife-Macros']['AUTO_UNPACK']),
                 ('10', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
                 ('0', 'Cancel', '')
             ]

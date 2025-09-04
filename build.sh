@@ -9,11 +9,11 @@ PY_CMD="${PYTHON:-python}"      # override with: PYTHON=/path/to/python bash bui
 ICON="assets/rylm_circular.ico"
 
 # Output filename for the exe
-OUT_NAME="RyLM.exe"
+OUT_NAME="RiskYourLife-Macros.exe"
 
 # Windows version info / metadata
 PRODUCT_NAME="RiskYourLife-Macros"
-FILE_DESC="RYL auto farming, ressing & hitting macros"
+FILE_DESC="Compatible with All Kind of RiskYourLife"
 COMPANY="Pari Malam"
 FILE_VER="1.6"      # must be 4-part
 PRODUCT_VER="1.6"   # make product version 4-part too
