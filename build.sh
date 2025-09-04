@@ -6,7 +6,7 @@ set -euo pipefail
 # =========================
 APP_NAME="main"                 # entry script WITHOUT .py (i.e., main.py)
 PY_CMD="${PYTHON:-python}"      # override with: PYTHON=/path/to/python bash build.sh
-ICON="assets/rylm.ico"
+ICON="assets/rylm_circular.ico"
 
 # Output filename for the exe
 OUT_NAME="RyLM.exe"
@@ -15,8 +15,8 @@ OUT_NAME="RyLM.exe"
 PRODUCT_NAME="RiskYourLife-Macros"
 FILE_DESC="RYL auto farming, ressing & hitting macros"
 COMPANY="Pari Malam"
-FILE_VER="1.5"      # must be 4-part
-PRODUCT_VER="1.5"   # make product version 4-part too
+FILE_VER="1.6"      # must be 4-part
+PRODUCT_VER="1.6"   # make product version 4-part too
 COPYRIGHT="(c) 2025 Pari Malam"
 
 NUITKA_FLAGS=(
@@ -28,6 +28,7 @@ NUITKA_FLAGS=(
   --windows-file-version="$FILE_VER"
   --windows-product-version="$PRODUCT_VER"
   --copyright="$COPYRIGHT"
+  --include-module=PIL.ImageQt
   --output-filename="$OUT_NAME"
 )
 
@@ -107,11 +108,21 @@ if [[ -f "$OUT_NAME" ]]; then
 
   # Use 7z command
   if command -v 7z >/dev/null 2>&1; then
-    7z a "$ARCHIVE_NAME" "$OUT_NAME"
-    if [[ -f "$ARCHIVE_NAME" ]]; then
-      ok "Archive created → ./$ARCHIVE_NAME"
+    if [[ -f "config.ini" ]]; then
+      7z a "$ARCHIVE_NAME" "$OUT_NAME" "config.ini"
+      if [[ -f "$ARCHIVE_NAME" ]]; then
+        ok "Archive created → ./$ARCHIVE_NAME (includes $OUT_NAME and config.ini)"
+      else
+        warn "Failed to create archive"
+      fi
     else
-      warn "Failed to create archive"
+      warn "config.ini not found, archiving only executable"
+      7z a "$ARCHIVE_NAME" "$OUT_NAME"
+      if [[ -f "$ARCHIVE_NAME" ]]; then
+        ok "Archive created → ./$ARCHIVE_NAME (includes $OUT_NAME only)"
+      else
+        warn "Failed to create archive"
+      fi
     fi
   else
     warn "7z command not found. Skipping archive creation."

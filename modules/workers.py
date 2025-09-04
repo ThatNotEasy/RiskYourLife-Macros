@@ -3,7 +3,7 @@
 import time
 import threading
 from modules.actions import *
-from modules.constants import SC_A, SC_S, SC_D, SC_W  # A
+from modules.constants import SC_A, SC_S, SC_D, SC_W  # Movement keys
 
 # Scan code for 'E' on US layout:
 SC_E = 0x12
@@ -17,26 +17,29 @@ class WorkerManager:
         self.loop_resser_on = False
         self.loop_combined_action_on = False
         self.loop_skill_attack_on = False  # NEW
-        self.loop_auto_move_on = False     # NEW
+        self.loop_auto_move_on = False     # W + S (front/back)
+        self.loop_auto_move2_on = False    # A + D (left/right)
         self.loop_auto_unpack_on = False   # NEW
+        self.mouse_held = False  # Track if mouse left button is held down
         self.e_event = threading.Event()
         self.click_event = threading.Event()
         self.resser_event = threading.Event()
         self.combined_action_event = threading.Event()
         self.skill_attack_event = threading.Event()  # NEW
-        self.auto_move_event = threading.Event()     # NEW
+        self.auto_move_event = threading.Event()     # W + S
+        self.auto_move2_event = threading.Event()    # A + D
         self.auto_unpack_event = threading.Event()   # NEW
         
     def worker_combined_action(self):
+        """Hold spacebar continuously for auto jump"""
         while True:
             if self.master_on and self.combined_action_event.is_set():
-                # Perform the combined action (hold spacebar + left click)
-                from modules.actions import combined_jump_click
-                combined_jump_click(self.config['CLICK_DOWN_MS'])
-                
-                # Small pause between actions
-                time.sleep(self.config['CLICK_DELAY'])
+                # Hold spacebar down
+                send_key_scancode(SC_SPACE, True)
+                time.sleep(0.02)  # Keep checking
             else:
+                # Release spacebar when disabled
+                send_key_scancode(SC_SPACE, False)
                 time.sleep(0.05)
                 
     def worker_skill_attack(self):
@@ -61,15 +64,29 @@ class WorkerManager:
                 time.sleep(0.05)
                 
     def worker_auto_move(self):
-        """Press A for 1.5s, then D for 1.5s, and repeat continuously"""
+        """Fast alternating presses: W-S-W-S-W-S... (front & back)"""
         while True:
             if self.master_on and self.auto_move_event.is_set():
+                # Fast press W (forward)
+                tap_key_scancode(SC_W, hold_ms=50)
+                time.sleep(0.02)  # Very short delay
+
+                # Fast press S (backward)
+                tap_key_scancode(SC_S, hold_ms=50)
+                time.sleep(0.02)  # Very short delay
+            else:
+                time.sleep(0.05)
+
+    def worker_auto_move2(self):
+        """Press A for 1.5s, then D for 1.5s, and repeat continuously (left & right)"""
+        while True:
+            if self.master_on and self.auto_move2_event.is_set():
                 # Press A for 1.5 seconds (move left)
                 send_key_scancode(SC_A, True)
                 time.sleep(1.5)
                 send_key_scancode(SC_A, False)
                 time.sleep(0.1)
-                
+
                 # Press D for 1.5 seconds (move right)
                 send_key_scancode(SC_D, True)
                 time.sleep(1.5)
@@ -89,9 +106,14 @@ class WorkerManager:
     def worker_click(self):
         while True:
             if self.master_on and self.click_event.is_set():
-                mouse_left_click_once(self.config['CLICK_DOWN_MS'])
-                time.sleep(self.config['CLICK_DELAY'])
+                if not self.mouse_held:
+                    mouse_left_down()
+                    self.mouse_held = True
+                time.sleep(0.02)  # Keep checking
             else:
+                if self.mouse_held:
+                    mouse_left_up()
+                    self.mouse_held = False
                 time.sleep(0.02)
                 
     def worker_resser(self):
@@ -122,5 +144,6 @@ class WorkerManager:
         threading.Thread(target=self.worker_resser, daemon=True).start()
         threading.Thread(target=self.worker_combined_action, daemon=True).start()
         threading.Thread(target=self.worker_skill_attack, daemon=True).start()  # NEW
-        threading.Thread(target=self.worker_auto_move, daemon=True).start()     # NEW
+        threading.Thread(target=self.worker_auto_move, daemon=True).start()     # W + S
+        threading.Thread(target=self.worker_auto_move2, daemon=True).start()    # A + D
         threading.Thread(target=self.worker_auto_unpack, daemon=True).start()   # NEW

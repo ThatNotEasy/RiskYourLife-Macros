@@ -21,8 +21,9 @@ def register_hotkeys():
         'AUTO_PICKER': HK_TOGGLE_E,
         'AUTO_HITTING': HK_TOGGLE_CLICK,
         'AUTO_SKILL_ATTACK': HK_TOGGLE_SKILL_ATTACK,  # NEW
-        'AUTO_JUMP_ATTACK': HK_TOGGLE_COMBINED_ACTION,
-        'AUTO_MOVE': HK_TOGGLE_AUTO_MOVE,  # NEW
+        'AUTO_JUMP': HK_TOGGLE_COMBINED_ACTION,
+        'AUTO_MOVE': HK_TOGGLE_AUTO_MOVE,  # W + S
+        'AUTO_MOVE2': HK_TOGGLE_AUTO_MOVE2,  # A + D
         'AUTO_RESSER': HK_TOGGLE_AUTO_RESSER,
         'AUTO_UNPACK': HK_TOGGLE_AUTO_UNPACK,  # NEW
         'QUIT_SCRIPT': HK_EXIT
@@ -44,7 +45,8 @@ def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_E)
     UnregisterHotKey(None, HK_TOGGLE_CLICK)
     UnregisterHotKey(None, HK_TOGGLE_SKILL_ATTACK)  # NEW
-    UnregisterHotKey(None, HK_TOGGLE_AUTO_MOVE)  # NEW
+    UnregisterHotKey(None, HK_TOGGLE_AUTO_MOVE)  # W + S
+    UnregisterHotKey(None, HK_TOGGLE_AUTO_MOVE2)  # A + D
     UnregisterHotKey(None, HK_TOGGLE_AUTO_RESSER)
     UnregisterHotKey(None, HK_TOGGLE_AUTO_UNPACK)  # NEW
     UnregisterHotKey(None, HK_TOGGLE_COMBINED_ACTION)

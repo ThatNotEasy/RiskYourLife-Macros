@@ -18,10 +18,11 @@ def load_config():
             'AUTO_PICKER': 'ALT+1',
             'AUTO_HITTING': 'ALT+2',
             'AUTO_SKILL_ATTACK': 'ALT+3',
-            'AUTO_JUMP_ATTACK': 'ALT+4',
+            'AUTO_JUMP': 'ALT+4',
             'AUTO_MOVE': 'ALT+5',
-            'AUTO_RESSER': 'ALT+6',
-            
+            'AUTO_MOVE2': 'ALT+6',
+            'AUTO_RESSER': 'ALT+7',
+            'AUTO_UNPACK': 'ALT+8'
         }
         save_config(config)
     return config
@@ -90,8 +91,10 @@ def get_hotkey_id_from_name(name):
         'AUTO_PICKER': HK_TOGGLE_E,
         'AUTO_HITTING': HK_TOGGLE_CLICK,
         'AUTO_SKILL_ATTACK': HK_TOGGLE_SKILL_ATTACK,  # Updated
-        'AUTO_JUMP_ATTACK': HK_TOGGLE_COMBINED_ACTION,
-        'AUTO_MOVE': HK_TOGGLE_AUTO_MOVE,  # Updated
+        'AUTO_JUMP': HK_TOGGLE_COMBINED_ACTION,
+        'AUTO_MOVE': HK_TOGGLE_AUTO_MOVE,  # W + S
+        'AUTO_MOVE2': HK_TOGGLE_AUTO_MOVE2,  # A + D
         'AUTO_RESSER': HK_TOGGLE_AUTO_RESSER,
+        'AUTO_UNPACK': HK_TOGGLE_AUTO_UNPACK,
     }
     return mapping.get(name)

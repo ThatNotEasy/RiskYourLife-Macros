@@ -3,7 +3,7 @@ import sys
 import os
 import platform
 import subprocess
-from modules.clients import Colors
+from modules import clients
 
 # Elevation (Run as Admin)
 ShellExecuteW = ctypes.windll.shell32.ShellExecuteW
@@ -30,7 +30,7 @@ def elevate_self_if_needed():
         # Current (non-admin) process exits; elevated one continues
         sys.exit(0)
     except Exception as e:
-        print(f"{Colors.BRIGHT_YELLOW}[WARN]{Colors.RESET} Elevation cancelled/failed; continuing without admin.")
+        print(f"{clients.Colors.BRIGHT_YELLOW}[WARN]{clients.Colors.RESET} Elevation cancelled/failed; continuing without admin.")
 
 def runas(file_path: str, args: str = "", cwd: str | None = None) -> bool:
     """Launch a program as Administrator on Windows (UAC)."""
