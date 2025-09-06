@@ -16,3 +16,4 @@ six==1.17.0
 urllib3==2.5.0
 WMI==1.5.1
 zstandard==0.24.0
+opencv-python==4.10.0.84

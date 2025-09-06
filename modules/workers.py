@@ -98,8 +98,8 @@ class WorkerManager:
     def worker_e(self):
         while True:
             if self.master_on and self.e_event.is_set():
-                tap_key_scancode(SC_E, hold_ms=1)   # press & release almost instantly
-                time.sleep(0.001)  # minimal pause (1 ms), prevents 100% CPU lock
+                tap_key_scancode(SC_E, hold_ms=0.01)   # ultra fast press & release
+                time.sleep(0.0001)  # minimal pause for smoothness
             else:
                 time.sleep(0.02)
 
@@ -122,8 +122,8 @@ class WorkerManager:
         while True:
             if self.master_on and self.resser_event.is_set():
                 for sc in f_keys:
-                    tap_key_scancode(sc, hold_ms=15)
-                    time.sleep(self.config['E_DELAY'])
+                    tap_key_scancode(sc, hold_ms=1)  # Very fast press
+                    time.sleep(0.001)  # Minimal delay between F keys
                     if not (self.master_on and self.resser_event.is_set()):
                         break
             else:
