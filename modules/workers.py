@@ -106,14 +106,9 @@ class WorkerManager:
     def worker_click(self):
         while True:
             if self.master_on and self.click_event.is_set():
-                if not self.mouse_held:
-                    mouse_left_down()
-                    self.mouse_held = True
-                time.sleep(0.02)  # Keep checking
+                mouse_left_click_once(self.config['CLICK_DOWN_MS'])  # Rapid clicking
+                time.sleep(0.001)  # Very fast delay between clicks
             else:
-                if self.mouse_held:
-                    mouse_left_up()
-                    self.mouse_held = False
                 time.sleep(0.02)
                 
     def worker_resser(self):

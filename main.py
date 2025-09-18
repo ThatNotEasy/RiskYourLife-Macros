@@ -4,10 +4,13 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up
-from modules.clients import Colors, print_client_info, launch_ryl
+from modules.clients import Colors, print_client_info
 from modules.config import parse_hotkey_string, save_config, load_config
 from modules.antidebug import AntiDebug
-import time
+import time, signal
+import colorama
+
+colorama.init()
 
 # Try to import MEOWING, but make it optional
 try:
@@ -17,6 +20,9 @@ except ImportError:
     MEOWING_AVAILABLE = False
     MEOWING = None
     print(f"{Colors.BRIGHT_YELLOW}[WARNING] MEOWING module not available - some features may be limited{Colors.RESET}")
+
+# Global MEOWING instance
+meow_instance = None
 
 # Config
 CONFIG = {
@@ -29,6 +35,35 @@ CONFIG = {
 def p(msg):
     if CONFIG['PRINT_STATUS']:
         print(msg, flush=True)
+
+# Global flag to prevent multiple signal handler calls
+_shutdown_in_progress = False
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully"""
+    global meow_instance, _shutdown_in_progress
+
+    # Prevent multiple calls during shutdown
+    if _shutdown_in_progress:
+        return
+
+    _shutdown_in_progress = True
+
+    try:
+        # Only attempt to stop meow_instance if we're not in Python's shutdown phase
+        if MEOWING_AVAILABLE and meow_instance and hasattr(meow_instance, 'stop'):
+            try:
+                meow_instance.stop()
+            except Exception:
+                # Ignore errors during shutdown
+                pass
+    except Exception:
+        # Ignore all errors during shutdown
+        pass
+
+    # Use sys.exit for cleaner shutdown
+    import sys
+    sys.exit(0)
 
 def status_indicator(is_on):
     if is_on:
@@ -131,7 +166,6 @@ class GameMacro:
     def change_config(self):
         while True:  # Use a loop instead of recursion to prevent stack overflow
             clear_and_print()
-            print_client_info()
 
             # Beautiful configuration menu display
             print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
@@ -238,17 +272,14 @@ class GameMacro:
         if not self.worker_manager.master_on and self.worker_manager.mouse_held:
             mouse_left_up()
             self.worker_manager.mouse_held = False
-        # p(f" [MASTER] {color}{status}{Colors.RESET}")
         self.render_status()
 
     def toggle_e(self):
         self.worker_manager.loop_e_on = not self.worker_manager.loop_e_on
         if self.worker_manager.loop_e_on:
             self.worker_manager.e_event.set()
-            # p(f"[AUTO_PICKER] {Colors.BRIGHT_GREEN}Auto Picker ON{Colors.RESET}")
         else:
             self.worker_manager.e_event.clear()
-            # p(f"[AUTO_PICKER] {Colors.BRIGHT_RED}Auto Picker OFF{Colors.RESET}")
         self.render_status()
 
     def toggle_click(self):
@@ -256,79 +287,77 @@ class GameMacro:
         if self.worker_manager.loop_click_on:
             self.worker_manager.click_event.set()
             mouse_left_up()
-            # p(f"[AUTO_HITTING] {Colors.BRIGHT_GREEN}Auto Hitting ON{Colors.RESET}")
         else:
             self.worker_manager.click_event.clear()
             mouse_left_up()
-            # p(f"[AUTO_HITTING] {Colors.BRIGHT_RED}Auto Hitting OFF{Colors.RESET}")
         self.render_status()
 
     def toggle_skill_attack(self):  # NEW
         self.worker_manager.loop_skill_attack_on = not self.worker_manager.loop_skill_attack_on
         if self.worker_manager.loop_skill_attack_on:
             self.worker_manager.skill_attack_event.set()
-            # p(f"[AUTO_SKILL_ATTACK] {Colors.BRIGHT_GREEN}Auto Skill ON{Colors.RESET}")
         else:
             self.worker_manager.skill_attack_event.clear()
-            # p(f"[AUTO_SKILL_ATTACK] {Colors.BRIGHT_RED}Auto Skill OFF{Colors.RESET}")
         self.render_status()
 
     def toggle_combined_action(self):
         self.worker_manager.loop_combined_action_on = not self.worker_manager.loop_combined_action_on
         if self.worker_manager.loop_combined_action_on:
             self.worker_manager.combined_action_event.set()
-            # p(f"[AUTO_JUMP] {Colors.BRIGHT_GREEN}Auto Jump ON{Colors.RESET}")
         else:
             self.worker_manager.combined_action_event.clear()
-            # p(f"[AUTO_JUMP] {Colors.BRIGHT_RED}Auto Jump OFF{Colors.RESET}")
         self.render_status()
 
     def toggle_auto_move(self):  # W + S (front/back)
         self.worker_manager.loop_auto_move_on = not self.worker_manager.loop_auto_move_on
         if self.worker_manager.loop_auto_move_on:
             self.worker_manager.auto_move_event.set()
-            # p(f"[AUTO_MOVE] {Colors.BRIGHT_GREEN}Auto Move W+S ON{Colors.RESET}")
         else:
             self.worker_manager.auto_move_event.clear()
-            # p(f"[AUTO_MOVE] {Colors.BRIGHT_RED}Auto Move W+S OFF{Colors.RESET}")
         self.render_status()
 
     def toggle_auto_move2(self):  # A + D (left/right)
         self.worker_manager.loop_auto_move2_on = not self.worker_manager.loop_auto_move2_on
         if self.worker_manager.loop_auto_move2_on:
             self.worker_manager.auto_move2_event.set()
-            # p(f"[AUTO_MOVE2] {Colors.BRIGHT_GREEN}Auto Move A+D ON{Colors.RESET}")
         else:
             self.worker_manager.auto_move2_event.clear()
-            # p(f"[AUTO_MOVE2] {Colors.BRIGHT_RED}Auto Move A+D OFF{Colors.RESET}")
         self.render_status()
 
     def toggle_resser(self):
         self.worker_manager.loop_resser_on = not self.worker_manager.loop_resser_on
         if self.worker_manager.loop_resser_on:
             self.worker_manager.resser_event.set()
-            # p(f"[AUTO_RESSER] {Colors.BRIGHT_GREEN}Auto Resser ON{Colors.RESET}")
         else:
             self.worker_manager.resser_event.clear()
-            # p(f"[AUTO_RESSER] {Colors.BRIGHT_RED}Auto Resser OFF{Colors.RESET}")
         self.render_status()
 
     def toggle_auto_unpack(self):
         self.worker_manager.loop_auto_unpack_on = not self.worker_manager.loop_auto_unpack_on
         if self.worker_manager.loop_auto_unpack_on:
             self.worker_manager.auto_unpack_event.set()
-            # p(f"[AUTO_UNPACK] {Colors.BRIGHT_GREEN}Auto Unpack Gold ON{Colors.RESET}")
         else:
             self.worker_manager.auto_unpack_event.clear()
-            # p(f"[AUTO_UNPACK] {Colors.BRIGHT_RED}Auto Unpack Gold OFF{Colors.RESET}")
         self.render_status()
 
     def exit_app(self):
-        p("[EXIT] Bye!")
-        if MEOWING_AVAILABLE:
-            meow = MEOWING(sinterval=2)
-            meow.stop()
-        raise SystemExit(0)
+        """Exit the application gracefully"""
+        global meow_instance, _shutdown_in_progress
+
+        if _shutdown_in_progress:
+            return
+
+        _shutdown_in_progress = True
+
+        try:
+            p("[EXIT] Bye!")
+            if MEOWING_AVAILABLE and meow_instance and hasattr(meow_instance, 'stop'):
+                meow_instance.stop()
+        except Exception:
+            pass
+
+        import sys
+        sys.exit(0)
     
     def run(self):
         ensure_admin()
@@ -371,34 +400,29 @@ class GameMacro:
         self.render_status()
         print()
 
-        # Automatic game launching
-        print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Launching RYL automatically, please wait...{Colors.RESET}")
-
-        try:
-            if launch_ryl(scan_fallback=True):
-                print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}RYL launched successfully! Macros are ready to use.{Colors.RESET}\n")
-            else:
-                print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_RED}Could not launch RYL automatically. Please start the game manually.{Colors.RESET}")
-                print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Macros are ready to use once RYL is running.{Colors.RESET}\n")
-        except Exception as e:
-            print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_RED}Error launching RYL: {e}{Colors.RESET}")
-            print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Please start the game manually. Macros are ready to use.{Colors.RESET}\n")
-        
+        print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Please start the game manually. Macros are ready to use.{Colors.RESET}")
         self.worker_manager.start_workers()
         self.anti_debug.start()  # Start anti-debug protection
         time.sleep(0.5)  # Brief delay for anti-debug initialization
         register_hotkeys()
         try:
             message_pump(self.callbacks)
+        except KeyboardInterrupt:
+            print(f"\n{Colors.BRIGHT_YELLOW}[INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}")
         finally:
             unregister_hotkeys()
             self.anti_debug.stop()  # Stop anti-debug protection
             mouse_left_up()  # final safety
+            if MEOWING_AVAILABLE and meow_instance:
+                meow_instance.stop()
 
 if __name__ == "__main__":
     if MEOWING_AVAILABLE:
-        meow = MEOWING(sinterval=2)
-        meow.start()
+        meow_instance = MEOWING()
+        meow_instance.start()
+        # Set up signal handlers for graceful shutdown
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
 
     app = GameMacro()
     app.run()
