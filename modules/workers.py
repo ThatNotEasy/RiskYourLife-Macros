@@ -2,8 +2,42 @@
 # workers.py - fixed version
 import time
 import threading
+import math
+import os
+import ctypes
+import psutil
+from pynput.mouse import Controller
 from modules.actions import *
 from modules.constants import SC_A, SC_S, SC_D, SC_W  # Movement keys
+from modules.smart_mouse import SmartMouse
+
+# Screen resolution detection
+def get_screen_resolution():
+    """Get the current screen resolution"""
+    try:
+        user32 = ctypes.windll.user32
+        return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)  # width, height
+    except:
+        return 1920, 1080  # fallback to Full HD
+
+def scale_coordinates(x, y, target_width=None, target_height=None):
+    """Scale coordinates to current screen resolution"""
+    if target_width is None or target_height is None:
+        # Use default base resolution
+        target_width = 1000
+        target_height = 600
+
+    current_width, current_height = get_screen_resolution()
+
+    # Calculate scaling factors
+    scale_x = current_width / target_width
+    scale_y = current_height / target_height
+
+    # Scale coordinates
+    scaled_x = int(x * scale_x)
+    scaled_y = int(y * scale_y)
+
+    return scaled_x, scaled_y
 
 # Scan code for 'E' on US layout:
 SC_E = 0x12
@@ -20,7 +54,9 @@ class WorkerManager:
         self.loop_auto_move_on = False     # W + S (front/back)
         self.loop_auto_move2_on = False    # A + D (left/right)
         self.loop_auto_unpack_on = False   # NEW
+        self.loop_mouse_360_on = False     # 360 mouse movement
         self.mouse_held = False  # Track if mouse left button is held down
+        self.mouse_controller = Controller()  # Regular mouse controller
         self.e_event = threading.Event()
         self.click_event = threading.Event()
         self.resser_event = threading.Event()
@@ -29,85 +65,104 @@ class WorkerManager:
         self.auto_move_event = threading.Event()     # W + S
         self.auto_move2_event = threading.Event()    # A + D
         self.auto_unpack_event = threading.Event()   # NEW
+        self.mouse_360_event = threading.Event()     # 360 mouse
+
+    def is_game_running(self):
+        """Check if the game process (MiniA.bin or Client.exe) is running"""
+        try:
+            for proc in psutil.process_iter(['name']):
+                name = proc.info['name'].lower()
+                if 'minia.bin' in name or 'client.exe' in name:
+                    return True
+            return False
+        except:
+            return False
         
     def worker_combined_action(self):
         """Hold spacebar continuously for auto jump"""
         while True:
-            if self.master_on and self.combined_action_event.is_set():
+            if self.master_on and self.combined_action_event.is_set() and self.is_game_running():
                 # Hold spacebar down
                 send_key_scancode(SC_SPACE, True)
-                time.sleep(0.02)  # Keep checking
+                time.sleep(0.03)  # Keep checking
             else:
                 # Release spacebar when disabled
                 send_key_scancode(SC_SPACE, False)
-                time.sleep(0.05)
+                time.sleep(0.03)
                 
     def worker_skill_attack(self):
-        """Press number 2 + right click, then number 3 + right click, then number 4 + right click"""
+        """Ultra fast: Press number 2 + right click, then number 3 + right click, then number 4 + right click"""
         while True:
-            if self.master_on and self.skill_attack_event.is_set():
+            if self.master_on and self.skill_attack_event.is_set() and self.is_game_running():
                 # Number 2 + right click
-                tap_key_scancode(SC_2, hold_ms=15)
+                tap_key_scancode(SC_2, hold_ms=10)
                 mouse_right_click_once(self.config['CLICK_DOWN_MS'])
                 time.sleep(self.config['CLICK_DELAY'])
-                
+
                 # Number 3 + right click
-                tap_key_scancode(SC_3, hold_ms=15)
+                tap_key_scancode(SC_3, hold_ms=10)
                 mouse_right_click_once(self.config['CLICK_DOWN_MS'])
                 time.sleep(self.config['CLICK_DELAY'])
-                
+
                 # Number 4 + right click
-                tap_key_scancode(SC_4, hold_ms=15)
+                tap_key_scancode(SC_4, hold_ms=10)
                 mouse_right_click_once(self.config['CLICK_DOWN_MS'])
                 time.sleep(self.config['CLICK_DELAY'])
             else:
-                time.sleep(0.05)
+                time.sleep(0.03)
                 
     def worker_auto_move(self):
         """Fast alternating presses: W-S-W-S-W-S... (front & back)"""
         while True:
-            if self.master_on and self.auto_move_event.is_set():
+            if self.master_on and self.auto_move_event.is_set() and self.is_game_running():
                 # Fast press W (forward)
-                tap_key_scancode(SC_W, hold_ms=50)
-                time.sleep(0.02)  # Very short delay
+                tap_key_scancode(SC_W, hold_ms=25)
+                time.sleep(0.01)  # Very short delay
 
                 # Fast press S (backward)
-                tap_key_scancode(SC_S, hold_ms=50)
-                time.sleep(0.02)  # Very short delay
+                tap_key_scancode(SC_S, hold_ms=25)
+                time.sleep(0.01)  # Very short delay
             else:
-                time.sleep(0.05)
+                # Use CPU-optimized sleep interval if enabled
+                sleep_interval = 0.1 if self.config.get('MOUSE_360_CPU_OPTIMIZED', True) else 0.03
+                time.sleep(sleep_interval)
 
     def worker_auto_move2(self):
-        """Press A for 1.5s, then D for 1.5s, and repeat continuously (left & right)"""
+        """Press A for 1.0s, then D for 1.0s, and repeat continuously (left & right)"""
         while True:
-            if self.master_on and self.auto_move2_event.is_set():
-                # Press A for 1.5 seconds (move left)
+            if self.master_on and self.auto_move2_event.is_set() and self.is_game_running():
+                # Press A for 1.0 seconds (move left)
                 send_key_scancode(SC_A, True)
-                time.sleep(1.5)
+                time.sleep(1.0)
                 send_key_scancode(SC_A, False)
-                time.sleep(0.1)
-
-                # Press D for 1.5 seconds (move right)
-                send_key_scancode(SC_D, True)
-                time.sleep(1.5)
-                send_key_scancode(SC_D, False)
-                time.sleep(0.1)
-            else:
                 time.sleep(0.05)
+
+                # Press D for 1.0 seconds (move right)
+                send_key_scancode(SC_D, True)
+                time.sleep(1.0)
+                send_key_scancode(SC_D, False)
+                time.sleep(0.05)
+            else:
+                time.sleep(0.03)
                 
     def worker_e(self):
         while True:
-            if self.master_on and self.e_event.is_set():
-                tap_key_scancode(SC_E, hold_ms=0.01)   # ultra fast press & release
-                time.sleep(0.0001)  # minimal pause for smoothness
+            if self.master_on and self.e_event.is_set() and self.is_game_running():
+                # Double press E ultra fast
+                tap_key_scancode(SC_E, hold_ms=0.002)   # First press
+                time.sleep(0.0002)  # Small delay between presses
+                tap_key_scancode(SC_E, hold_ms=0.002)   # Second press
+                time.sleep(0.002)  # Delay after double press
             else:
                 time.sleep(0.02)
 
     def worker_click(self):
+        """Rapid left mouse clicking"""
         while True:
-            if self.master_on and self.click_event.is_set():
-                mouse_left_click_once(self.config['CLICK_DOWN_MS'])  # Rapid clicking
-                time.sleep(0.001)  # Very fast delay between clicks
+            if self.master_on and self.click_event.is_set() and self.is_game_running():
+                # Rapid click
+                mouse_left_click_once(self.config['CLICK_DOWN_MS'])
+                time.sleep(self.config['CLICK_DELAY'])
             else:
                 time.sleep(0.02)
                 
@@ -115,23 +170,94 @@ class WorkerManager:
         f_keys = [0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43, 0x44]
         # F1–F10 scan codes (including F8 0x42)
         while True:
-            if self.master_on and self.resser_event.is_set():
+            if self.master_on and self.resser_event.is_set() and self.is_game_running():
                 for sc in f_keys:
-                    tap_key_scancode(sc, hold_ms=1)  # Very fast press
-                    time.sleep(0.001)  # Minimal delay between F keys
-                    if not (self.master_on and self.resser_event.is_set()):
+                    tap_key_scancode(sc, hold_ms=0.5)  # Ultra fast press
+                    time.sleep(0.0005)  # Minimal delay between F keys
+                    if not (self.master_on and self.resser_event.is_set() and self.is_game_running()):
                         break
             else:
-                time.sleep(0.05)
+                time.sleep(0.02)
 
     def worker_auto_unpack(self):
-        """Fast right-clicking for auto unpack gold"""
+        """Ultra fast right-clicking for auto unpack gold"""
         while True:
-            if self.master_on and self.auto_unpack_event.is_set():
+            if self.master_on and self.auto_unpack_event.is_set() and self.is_game_running():
                 mouse_right_click_once(self.config['CLICK_DOWN_MS'])
-                time.sleep(0.01)  # Very fast clicking - 10ms delay
+                time.sleep(0.0005)  # Ultra fast clicking
             else:
                 time.sleep(0.02)
+
+    def worker_mouse_360(self):
+        """Move mouse using positions from position.ini with smooth movement and multi-monitor support"""
+        raw_positions = []  # Store original positions
+        scaled_positions = []  # Store scaled positions for current resolution
+
+        def load_and_scale_positions():
+            """Load positions from file and scale them for current resolution"""
+            raw_positions.clear()
+            scaled_positions.clear()
+
+            if os.path.exists('position.ini'):
+                with open('position.ini', 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if ',' in line and not line.startswith('#'):
+                            try:
+                                x, y = map(int, line.split(','))
+                                raw_positions.append((x, y))
+
+                                # Scale for current resolution using configured base resolution
+                                scaled_x, scaled_y = scale_coordinates(x, y, self.config.get('MOUSE_360_BASE_WIDTH', 1000), self.config.get('MOUSE_360_BASE_HEIGHT', 600))
+                                scaled_positions.append((scaled_x, scaled_y))
+
+                            except ValueError:
+                                pass
+
+        # Initial load
+        load_and_scale_positions()
+
+        if not raw_positions:
+            print("[!] No valid positions found in position.ini - Mouse 360 worker will wait for valid positions")
+
+        # Initialize SmartMouse for smooth movement
+        smart_mouse = SmartMouse(mouse_controller=self.mouse_controller)
+
+        last_resolution = get_screen_resolution()
+
+        while True:
+            # Check if resolution changed
+            current_resolution = get_screen_resolution()
+            if current_resolution != last_resolution:
+                load_and_scale_positions()
+                last_resolution = current_resolution
+
+            # Reload positions in case the file was updated
+            load_and_scale_positions()
+
+            if self.master_on and self.mouse_360_event.is_set() and scaled_positions and self.is_game_running():
+                try:
+                    for i, (x, y) in enumerate(scaled_positions):
+                        if self.config.get('MOUSE_360_SMOOTH_MOVEMENT', True):
+                            # Use smooth movement between positions
+                            smart_mouse.move_to(x, y)
+                        else:
+                            # Use direct position setting for instant movement (legacy mode)
+                            self.mouse_controller.position = (x, y)
+
+                        # Add configurable delay between position changes
+                        if i < len(scaled_positions) - 1:  # Don't delay after the last position
+                            delay = self.config.get('MOUSE_360_DELAY', 0.2)
+                            time.sleep(delay)
+
+                    # Brief pause at the end of cycle before repeating
+                    sleep_interval = 0.1 if self.config.get('MOUSE_360_CPU_OPTIMIZED', True) else 0.05
+                    time.sleep(sleep_interval)
+                except Exception as e:
+                    print(f"[!] Error in mouse 360 movement: {e}")
+                    time.sleep(0.01)
+            else:
+                time.sleep(0.03)
 
     def start_workers(self):
         threading.Thread(target=self.worker_e, daemon=True).start()
@@ -142,3 +268,4 @@ class WorkerManager:
         threading.Thread(target=self.worker_auto_move, daemon=True).start()     # W + S
         threading.Thread(target=self.worker_auto_move2, daemon=True).start()    # A + D
         threading.Thread(target=self.worker_auto_unpack, daemon=True).start()   # NEW
+        threading.Thread(target=self.worker_mouse_360, daemon=True).start()     # 360 mouse

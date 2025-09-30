@@ -72,3 +72,12 @@ def mouse_left_click_once(click_down_ms: float = 35):
     mouse_left_down()
     time.sleep(click_down_ms / 1000.0)
     mouse_left_up()
+
+def mouse_move(dx: int, dy: int):
+    inp = INPUT()
+    inp.type = INPUT_MOUSE
+    inp.union.mi = MOUSEINPUT(dx, dy, 0, MOUSEEVENTF_MOVE, 0, 0)
+    SendInput(1, ctypes.byref(inp), ctypes.sizeof(inp))
+
+def mouse_set_pos(x: int, y: int):
+    ctypes.windll.user32.SetCursorPos(x, y)

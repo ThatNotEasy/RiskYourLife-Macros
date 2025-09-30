@@ -7,23 +7,32 @@ CONFIG_FILE = "config.ini"
 
 def load_config():
     config = configparser.ConfigParser()
+    default_config = {
+        'START_SCRIPT': 'HOME',
+        'STOP_SCRIPT': 'HOME',
+        'QUIT_SCRIPT': 'ALT+Q',
+        'AUTO_PICKER': 'ALT+1',
+        'AUTO_HITTING': 'ALT+2',
+        'AUTO_SKILL_ATTACK': 'ALT+3',
+        'AUTO_JUMP': 'ALT+4',
+        'AUTO_MOVE': 'ALT+5',
+        'AUTO_MOVE2': 'ALT+6',
+        'AUTO_RESSER': 'ALT+7',
+        'AUTO_UNPACK': 'ALT+8',
+        'MOUSE_360': 'ALT+9'
+    }
     if os.path.exists(CONFIG_FILE):
         config.read(CONFIG_FILE)
+        # Ensure all default keys are present
+        if not config.has_section('RiskYourLife-Macros'):
+            config.add_section('RiskYourLife-Macros')
+        for key, value in default_config.items():
+            if not config.has_option('RiskYourLife-Macros', key):
+                config.set('RiskYourLife-Macros', key, value)
+        save_config(config)
     else:
         # Create default config
-        config['RiskYourLife-Macros'] = {
-            'START_SCRIPT': 'HOME',
-            'STOP_SCRIPT': 'HOME',
-            'QUIT_SCRIPT': 'ALT+Q',
-            'AUTO_PICKER': 'ALT+1',
-            'AUTO_HITTING': 'ALT+2',
-            'AUTO_SKILL_ATTACK': 'ALT+3',
-            'AUTO_JUMP': 'ALT+4',
-            'AUTO_MOVE': 'ALT+5',
-            'AUTO_MOVE2': 'ALT+6',
-            'AUTO_RESSER': 'ALT+7',
-            'AUTO_UNPACK': 'ALT+8'
-        }
+        config['RiskYourLife-Macros'] = default_config
         save_config(config)
     return config
 
@@ -96,5 +105,6 @@ def get_hotkey_id_from_name(name):
         'AUTO_MOVE2': HK_TOGGLE_AUTO_MOVE2,  # A + D
         'AUTO_RESSER': HK_TOGGLE_AUTO_RESSER,
         'AUTO_UNPACK': HK_TOGGLE_AUTO_UNPACK,
+        'MOUSE_360': HK_TOGGLE_MOUSE_360,
     }
     return mapping.get(name)

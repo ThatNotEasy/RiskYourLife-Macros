@@ -3,7 +3,7 @@ from modules.banners import clear_and_print
 from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
-from modules.actions import mouse_left_up
+from modules.actions import mouse_left_up, send_key_scancode
 from modules.clients import Colors, print_client_info
 from modules.config import parse_hotkey_string, save_config, load_config
 from modules.antidebug import AntiDebug
@@ -27,9 +27,15 @@ meow_instance = None
 # Config
 CONFIG = {
     'E_DELAY': 0.4,           # interval between repeating "E" presses (seconds)
-    'CLICK_DELAY': 0.4,       # interval between clicks (seconds)
-    'CLICK_DOWN_MS': 0.4,       # hold down for each click before release (ms)
-    'PRINT_STATUS': True       # console logs on/off
+    'CLICK_DELAY': 0.05,      # interval between clicks (seconds)
+    'CLICK_DOWN_MS': 35.0,      # hold down for each click before release (ms)
+    'PRINT_STATUS': True,      # console logs on/off
+    'MOUSE_360_BASE_WIDTH': 1000,   # base width for position scaling
+    'MOUSE_360_BASE_HEIGHT': 600,   # base height for position scaling
+    'MOUSE_360_CPU_OPTIMIZED': True, # reduce CPU usage when enabled
+    'MOUSE_360_SPEED': 0.5,         # movement speed multiplier (0.1 = slow, 1.0 = fast)
+    'MOUSE_360_DELAY': 0.2,         # delay between position changes (seconds)
+    'MOUSE_360_SMOOTH_MOVEMENT': True # use smooth movement instead of instant jumps
 }
 
 def p(msg):
@@ -91,13 +97,15 @@ class GameMacro:
             HK_TOGGLE_AUTO_MOVE: self.toggle_auto_move,  # W + S
             HK_TOGGLE_AUTO_MOVE2: self.toggle_auto_move2,  # A + D
             HK_TOGGLE_AUTO_UNPACK: self.toggle_auto_unpack,  # NEW
+            HK_TOGGLE_MOUSE_360: self.toggle_mouse_360,  # 360 mouse
             HK_EXIT: self.exit_app,
             HK_CONFIG_CHANGE: self.change_config
         }
         
     def build_status_line(self):
         display_name = 'RYL2/RYL1'
-        game_status = f"{Colors.BRIGHT_GREEN}● [READY]{Colors.RESET}"
+        game_running = self.worker_manager.is_game_running()
+        game_status = f"{Colors.BRIGHT_GREEN}● [READY]{Colors.RESET}" if game_running else f"{Colors.BRIGHT_RED}● [GAME NOT FOUND]{Colors.RESET}"
 
         # Map features to their config keys for hotkeys
         feature_hotkeys = {
@@ -108,7 +116,8 @@ class GameMacro:
             "Auto Move W+S": "AUTO_MOVE",
             "Auto Move A+D": "AUTO_MOVE2",
             "Auto Resser": "AUTO_RESSER",
-            "Auto Unpack": "AUTO_UNPACK"
+            "Auto Unpack": "AUTO_UNPACK",
+            "Mouse 360": "MOUSE_360"
         }
 
         # Prepare the 2-column matrix (left, right)
@@ -122,6 +131,8 @@ class GameMacro:
             (self.worker_manager.loop_auto_move2_on,      "Auto Move A+D")),
             ((self.worker_manager.loop_resser_on,          "Auto Resser"),
             (self.worker_manager.loop_auto_unpack_on,     "Auto Unpack")),
+            ((self.worker_manager.loop_mouse_360_on,       "Mouse 360"),
+            (None,                                         "")),
         ]
 
         # Fixed widths to keep the UI perfectly stable
@@ -141,6 +152,7 @@ class GameMacro:
             if label in feature_hotkeys:
                 config_key = feature_hotkeys[label]
                 hotkey = self.config['RiskYourLife-Macros'].get(config_key, "")
+                hotkey = hotkey[:HOTKEY_W]  # truncate if too long
             # align: indicator is variable-color but constant-visible width
             return f"{dot} {Colors.BRIGHT_WHITE}{label:<{LABEL_W}}{Colors.RESET} {Colors.BRIGHT_CYAN}{hotkey:<{HOTKEY_W}}{Colors.RESET}"
 
@@ -189,7 +201,8 @@ class GameMacro:
                 ('7', 'Auto Move A+D', self.config['RiskYourLife-Macros']['AUTO_MOVE2']),
                 ('8', 'Auto Resser', self.config['RiskYourLife-Macros']['AUTO_RESSER']),
                 ('9', 'Auto Unpack', self.config['RiskYourLife-Macros']['AUTO_UNPACK']),
-                ('10', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
+                ('10', 'Mouse 360', self.config['RiskYourLife-Macros']['MOUSE_360']),
+                ('11', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
                 ('0', 'Cancel', '')
             ]
 
@@ -202,7 +215,7 @@ class GameMacro:
             print()
 
             try:
-                choice = input(f"{Colors.BRIGHT_YELLOW}Enter choice (0-10): {Colors.RESET}").strip()
+                choice = input(f"{Colors.BRIGHT_YELLOW}Enter choice (0-11): {Colors.RESET}").strip()
                 if choice == '0':
                     print()
                     return  # Exit the configuration menu
@@ -217,7 +230,8 @@ class GameMacro:
                     '7': 'AUTO_MOVE2',
                     '8': 'AUTO_RESSER',
                     '9': 'AUTO_UNPACK',
-                    '10': 'QUIT_SCRIPT'
+                    '10': 'MOUSE_360',
+                    '11': 'QUIT_SCRIPT'
                 }
 
                 if choice in option_mapping:
@@ -268,9 +282,10 @@ class GameMacro:
         self.worker_manager.master_on = not self.worker_manager.master_on
         status = "ON" if self.worker_manager.master_on else "OFF"
         color = Colors.BRIGHT_GREEN if self.worker_manager.master_on else Colors.BRIGHT_RED
-        # Ensure mouse button is released when master is turned off
-        if not self.worker_manager.master_on and self.worker_manager.mouse_held:
+        # Ensure mouse button and spacebar are released when master is turned off
+        if not self.worker_manager.master_on:
             mouse_left_up()
+            send_key_scancode(SC_SPACE, False)  # Release spacebar
             self.worker_manager.mouse_held = False
         self.render_status()
 
@@ -286,7 +301,6 @@ class GameMacro:
         self.worker_manager.loop_click_on = not self.worker_manager.loop_click_on
         if self.worker_manager.loop_click_on:
             self.worker_manager.click_event.set()
-            mouse_left_up()
         else:
             self.worker_manager.click_event.clear()
             mouse_left_up()
@@ -340,6 +354,14 @@ class GameMacro:
             self.worker_manager.auto_unpack_event.clear()
         self.render_status()
 
+    def toggle_mouse_360(self):
+        self.worker_manager.loop_mouse_360_on = not self.worker_manager.loop_mouse_360_on
+        if self.worker_manager.loop_mouse_360_on:
+            self.worker_manager.mouse_360_event.set()
+        else:
+            self.worker_manager.mouse_360_event.clear()
+        self.render_status()
+
     def exit_app(self):
         """Exit the application gracefully"""
         global meow_instance, _shutdown_in_progress
@@ -350,7 +372,7 @@ class GameMacro:
         _shutdown_in_progress = True
 
         try:
-            p("[EXIT] Bye!")
+            print(f"\n{Colors.BRIGHT_YELLOW} [INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}")
             if MEOWING_AVAILABLE and meow_instance and hasattr(meow_instance, 'stop'):
                 meow_instance.stop()
         except Exception:
@@ -386,6 +408,7 @@ class GameMacro:
             (self.config['RiskYourLife-Macros']['AUTO_MOVE2'], "Auto Move A+D"),
             (self.config['RiskYourLife-Macros']['AUTO_RESSER'], "Auto Resser"),
             (self.config['RiskYourLife-Macros']['AUTO_UNPACK'], "Auto Unpack Gold"),
+            (self.config['RiskYourLife-Macros']['MOUSE_360'], "Mouse 360"),
             ("ALT+C", "Change HotKeys"),
             (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program")
         ]
@@ -408,7 +431,7 @@ class GameMacro:
         try:
             message_pump(self.callbacks)
         except KeyboardInterrupt:
-            print(f"\n{Colors.BRIGHT_YELLOW}[INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}")
+            print(f"\n{Colors.BRIGHT_YELLOW} [INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}")
         finally:
             unregister_hotkeys()
             self.anti_debug.stop()  # Stop anti-debug protection

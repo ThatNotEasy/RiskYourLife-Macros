@@ -26,6 +26,7 @@ def register_hotkeys():
         'AUTO_MOVE2': HK_TOGGLE_AUTO_MOVE2,  # A + D
         'AUTO_RESSER': HK_TOGGLE_AUTO_RESSER,
         'AUTO_UNPACK': HK_TOGGLE_AUTO_UNPACK,  # NEW
+        'MOUSE_360': HK_TOGGLE_MOUSE_360,  # 360 mouse
         'QUIT_SCRIPT': HK_EXIT
     }
     
@@ -33,7 +34,9 @@ def register_hotkeys():
         hotkey_str = hotkey_config[config_name]
         try:
             modifiers, key = parse_hotkey_string(hotkey_str)
-            RegisterHotKey(None, hotkey_id, modifiers, key)
+            result = RegisterHotKey(None, hotkey_id, modifiers, key)
+            if not result:
+                print(f"[!] Error registering hotkey {config_name} ({hotkey_str}): RegisterHotKey failed")
         except Exception as e:
             print(f"[!] Error parsing hotkey {config_name} ({hotkey_str}): {e}")
 
@@ -49,6 +52,7 @@ def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_AUTO_MOVE2)  # A + D
     UnregisterHotKey(None, HK_TOGGLE_AUTO_RESSER)
     UnregisterHotKey(None, HK_TOGGLE_AUTO_UNPACK)  # NEW
+    UnregisterHotKey(None, HK_TOGGLE_MOUSE_360)  # 360 mouse
     UnregisterHotKey(None, HK_TOGGLE_COMBINED_ACTION)
     UnregisterHotKey(None, HK_CONFIG_CHANGE)
     UnregisterHotKey(None, HK_EXIT)

@@ -3,9 +3,10 @@ main.dist
 main.onefile-build
 build
 venv
-nuitka-crash-report.xml
-RiskYourLife-Macros.exe
-RiskYourLife-Macros_V1.6.zip
+*.xml
+*.exe
+*.zip
 modules/antidebug.py
 modules/clients.py
 modules/meowing.py
+*.pyc
