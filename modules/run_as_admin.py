@@ -17,20 +17,6 @@ def is_admin() -> bool:
     except Exception:
         return False
 
-def elevate_self_if_needed():
-    """Re-launch this script with admin rights via UAC if not elevated."""
-    if platform.system() != "Windows" or is_admin():
-        return
-    params = " ".join(f'"{arg}"' for arg in sys.argv)
-    try:
-        # Show UAC prompt to elevate this Python process
-        ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", sys.executable, params, None, 1
-        )
-        # Current (non-admin) process exits; elevated one continues
-        sys.exit(0)
-    except Exception as e:
-        print(f"{clients.Colors.BRIGHT_YELLOW}[WARN]{clients.Colors.RESET} Elevation cancelled/failed; continuing without admin.")
 
 def runas(file_path: str, args: str = "", cwd: str | None = None) -> bool:
     """Launch a program as Administrator on Windows (UAC)."""
@@ -58,5 +44,4 @@ def ensure_admin():
                 raise RuntimeError(f"Elevation failed (code {rc})")
             sys.exit(0)
     except Exception as e:
-        print(f"[!] Admin check failed: {e}")
         sys.exit(1)

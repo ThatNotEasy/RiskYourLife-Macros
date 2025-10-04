@@ -32,6 +32,7 @@ VK_BACK = 0x08          # BACKSPACE key
 VK_END = 0x23           # END key
 VK_SHIFT = 0x10         # SHIFT key
 VK_CONTROL = 0x11       # CTRL key
+VK_LCONTROL = 0xA2      # Left CTRL key
 VK_MENU = 0x12          # ALT key
 VK_CAPITAL = 0x14       # CAPS LOCK key
 VK_LWIN = 0x5B          # Left Windows key
@@ -92,6 +93,7 @@ HK_TOGGLE_AUTO_MOVE = 1009      # W + S (front/back)
 HK_TOGGLE_AUTO_MOVE2 = 1012     # A + D (left/right)
 HK_TOGGLE_AUTO_UNPACK = 1011
 HK_TOGGLE_MOUSE_360 = 1013      # 360 mouse movement
+HK_AUTO_OFFER = 1014            # Auto Offer with ALT+0
 HK_CONFIG_CHANGE = 1007
 HK_EXIT = 1004
 

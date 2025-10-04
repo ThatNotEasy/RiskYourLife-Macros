@@ -2,10 +2,14 @@ certifi==2025.8.3
 charset-normalizer==3.4.3
 clang==20.1.5
 colorama==0.4.6
+ffmpeg-python==0.2.0
+future==1.0.0
 GPUtil==1.4.0
 idna==3.10
 keyboard==0.13.5
+mouse-anywhere==0.2.6
 MouseInfo==0.1.3
+mss==10.1.0
 Nuitka==2.7.12
 numpy==2.2.6
 opencv-python==4.10.0.84
@@ -26,6 +30,8 @@ pywin32==311
 requests==2.32.5
 screeninfo==0.8.1
 six==1.17.0
+smart-mouse==1.0.5
 urllib3==2.5.0
 WMI==1.5.1
+xspeedhack @ file:///F:/Pari/PERSONAL-PROJECT/RYL/RiskYourLife-Macros/xspeedhack
 zstandard==0.24.0

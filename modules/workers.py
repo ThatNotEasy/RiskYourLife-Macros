@@ -6,6 +6,7 @@ import math
 import os
 import ctypes
 import psutil
+import pyautogui
 from pynput.mouse import Controller
 from modules.actions import *
 from modules.constants import SC_A, SC_S, SC_D, SC_W  # Movement keys
@@ -49,6 +50,7 @@ class WorkerManager:
         self.loop_e_on = False
         self.loop_click_on = False
         self.loop_resser_on = False
+        self.auto_offer_on = False
         self.loop_combined_action_on = False
         self.loop_skill_attack_on = False  # NEW
         self.loop_auto_move_on = False     # W + S (front/back)
@@ -65,6 +67,7 @@ class WorkerManager:
         self.auto_move_event = threading.Event()     # W + S
         self.auto_move2_event = threading.Event()    # A + D
         self.auto_unpack_event = threading.Event()   # NEW
+        self.auto_offer_event = threading.Event()    # Auto Offer
         self.mouse_360_event = threading.Event()     # 360 mouse
 
     def is_game_running(self):
@@ -157,13 +160,19 @@ class WorkerManager:
                 time.sleep(0.02)
 
     def worker_click(self):
-        """Rapid left mouse clicking"""
+        """Hold left mouse button continuously for auto hit"""
         while True:
             if self.master_on and self.click_event.is_set() and self.is_game_running():
-                # Rapid click
-                mouse_left_click_once(self.config['CLICK_DOWN_MS'])
-                time.sleep(self.config['CLICK_DELAY'])
+                # Hold left mouse button down
+                if not self.mouse_held:
+                    mouse_left_down()
+                    self.mouse_held = True
+                time.sleep(0.02)  # Small delay to prevent excessive CPU usage
             else:
+                # Release left mouse button when disabled
+                if self.mouse_held:
+                    mouse_left_up()
+                    self.mouse_held = False
                 time.sleep(0.02)
                 
     def worker_resser(self):
@@ -189,14 +198,36 @@ class WorkerManager:
                 time.sleep(0.02)
 
     def worker_mouse_360(self):
-        """Move mouse using positions from position.ini with smooth movement and multi-monitor support"""
-        raw_positions = []  # Store original positions
-        scaled_positions = []  # Store scaled positions for current resolution
+        """Move mouse in continuous circular motion using configuration from position.ini"""
+        circle_config = None  # Store circle configuration (center_x, center_y, radius, speed)
+        
+    def worker_auto_offer(self):
+        """Auto Offer toggle with ALT+0 hotkey - TOGGLE MODE"""
+        while True:
+            if self.master_on and self.auto_offer_event.is_set():
+                # Press Enter to open chat
+                pyautogui.press("enter")
 
-        def load_and_scale_positions():
-            """Load positions from file and scale them for current resolution"""
-            raw_positions.clear()
-            scaled_positions.clear()
+                # Wait a moment for the chat to open
+                time.sleep(0.5)
+
+                # Press Ctrl+V (paste) - using hotkey like test.py
+                pyautogui.hotkey("ctrl", "v")
+
+                # Wait a moment before pressing Enter
+                time.sleep(0.5)
+
+                # Press Enter again to send the message
+                pyautogui.press("enter")
+
+                # Wait 14 seconds before next offer
+                time.sleep(14.0)
+            else:
+                time.sleep(0.03)
+
+        def load_circle_config():
+            """Load circle configuration from position.ini"""
+            nonlocal circle_config
 
             if os.path.exists('position.ini'):
                 with open('position.ini', 'r') as f:
@@ -204,60 +235,89 @@ class WorkerManager:
                         line = line.strip()
                         if ',' in line and not line.startswith('#'):
                             try:
-                                x, y = map(int, line.split(','))
-                                raw_positions.append((x, y))
-
-                                # Scale for current resolution using configured base resolution
-                                scaled_x, scaled_y = scale_coordinates(x, y, self.config.get('MOUSE_360_BASE_WIDTH', 1000), self.config.get('MOUSE_360_BASE_HEIGHT', 600))
-                                scaled_positions.append((scaled_x, scaled_y))
-
+                                parts = line.split(',')
+                                if len(parts) >= 4:
+                                    center_x, center_y, radius, speed = map(float, parts[:4])
+                                    circle_config = {
+                                        'center_x': center_x,
+                                        'center_y': center_y,
+                                        'radius': radius,
+                                        'speed': speed
+                                    }
+                                    return circle_config
                             except ValueError:
                                 pass
 
-        # Initial load
-        load_and_scale_positions()
+            return None
 
-        if not raw_positions:
-            print("[!] No valid positions found in position.ini - Mouse 360 worker will wait for valid positions")
+        # Initialize circle configuration
+        circle_config = load_circle_config()
 
-        # Initialize SmartMouse for smooth movement
-        smart_mouse = SmartMouse(mouse_controller=self.mouse_controller)
+        if not circle_config:
+            print("[!] No valid circle configuration found in position.ini - Mouse 360 worker will wait for valid config")
+            circle_config = {'center_x': 500, 'center_y': 300, 'radius': 100, 'speed': 1.0}  # Default fallback
+
+        # Initialize FastSmartMouse for faster movement
+        fast_mouse = SmartMouse(mouse_controller=self.mouse_controller)
 
         last_resolution = get_screen_resolution()
+        angle = 0.0  # Current rotation angle
 
         while True:
             # Check if resolution changed
             current_resolution = get_screen_resolution()
             if current_resolution != last_resolution:
-                load_and_scale_positions()
                 last_resolution = current_resolution
+                # Reload config in case resolution scaling parameters changed
+                circle_config = load_circle_config() or circle_config
 
-            # Reload positions in case the file was updated
-            load_and_scale_positions()
+            # Reload configuration in case the file was updated
+            circle_config = load_circle_config() or circle_config
 
-            if self.master_on and self.mouse_360_event.is_set() and scaled_positions and self.is_game_running():
+            if self.master_on and self.mouse_360_event.is_set() and self.is_game_running():
                 try:
-                    for i, (x, y) in enumerate(scaled_positions):
-                        if self.config.get('MOUSE_360_SMOOTH_MOVEMENT', True):
-                            # Use smooth movement between positions
-                            smart_mouse.move_to(x, y)
-                        else:
-                            # Use direct position setting for instant movement (legacy mode)
-                            self.mouse_controller.position = (x, y)
+                    # Scale circle parameters for current resolution
+                    base_width = self.config.get('MOUSE_360_BASE_WIDTH', 1000)
+                    base_height = self.config.get('MOUSE_360_BASE_HEIGHT', 600)
+                    current_width, current_height = get_screen_resolution()
 
-                        # Add configurable delay between position changes
-                        if i < len(scaled_positions) - 1:  # Don't delay after the last position
-                            delay = self.config.get('MOUSE_360_DELAY', 0.2)
-                            time.sleep(delay)
+                    scale_x = current_width / base_width
+                    scale_y = current_height / base_height
 
-                    # Brief pause at the end of cycle before repeating
-                    sleep_interval = 0.1 if self.config.get('MOUSE_360_CPU_OPTIMIZED', True) else 0.05
-                    time.sleep(sleep_interval)
+                    scaled_center_x = int(circle_config['center_x'] * scale_x)
+                    scaled_center_y = int(circle_config['center_y'] * scale_y)
+                    scaled_radius = int(circle_config['radius'] * min(scale_x, scale_y))  # Use min scale to maintain aspect ratio
+
+                    # Calculate next position in circle
+                    # Increase angle based on speed and delta time for smooth rotation
+                    rotation_speed = circle_config['speed'] * self.config.get('MOUSE_360_SPEED', 1.0)
+                    angle += 0.1 * rotation_speed  # Adjust this value to control rotation speed
+
+                    # Keep angle in 0-360 range
+                    angle = angle % (2 * math.pi)
+
+                    # Calculate position on circle
+                    x = scaled_center_x + scaled_radius * math.cos(angle)
+                    y = scaled_center_y + scaled_radius * math.sin(angle)
+
+                    # Move mouse to new position smoothly
+                    if self.config.get('MOUSE_360_SMOOTH_MOVEMENT', True):
+                        fast_mouse.move_to(int(x), int(y))
+                    else:
+                        self.mouse_controller.position = (int(x), int(y))
+
+                    # Very short delay for smooth continuous motion
+                    # Make it faster by using smaller delay
+                    delay = max(0.01, self.config.get('MOUSE_360_DELAY', 0.05) / rotation_speed)
+                    time.sleep(delay)
+
                 except Exception as e:
                     print(f"[!] Error in mouse 360 movement: {e}")
                     time.sleep(0.01)
             else:
-                time.sleep(0.03)
+                # CPU-optimized sleep when not active
+                sleep_interval = 0.1 if self.config.get('MOUSE_360_CPU_OPTIMIZED', True) else 0.03
+                time.sleep(sleep_interval)
 
     def start_workers(self):
         threading.Thread(target=self.worker_e, daemon=True).start()
@@ -268,4 +328,5 @@ class WorkerManager:
         threading.Thread(target=self.worker_auto_move, daemon=True).start()     # W + S
         threading.Thread(target=self.worker_auto_move2, daemon=True).start()    # A + D
         threading.Thread(target=self.worker_auto_unpack, daemon=True).start()   # NEW
+        threading.Thread(target=self.worker_auto_offer, daemon=True).start()   # NEW
         threading.Thread(target=self.worker_mouse_360, daemon=True).start()     # 360 mouse

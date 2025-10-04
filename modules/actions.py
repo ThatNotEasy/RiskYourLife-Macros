@@ -28,18 +28,6 @@ def mouse_right_click_once(click_down_ms: float = 35):
     time.sleep(click_down_ms / 1000.0)
     mouse_right_up()
 
-def combined_jump_click(click_down_ms: float = 35):
-    """Hold spacebar + left click continuously"""
-    # Hold spacebar and left mouse button down
-    send_key_scancode(SC_SPACE, True)  # Space down (jump)
-    mouse_left_down()  # Left mouse button down
-    
-    # Keep both held for the specified duration
-    time.sleep(click_down_ms / 1000.0)
-    
-    # Release both
-    mouse_left_up()  # Left mouse button up
-    send_key_scancode(SC_SPACE, False)  # Space up
     
     
 def send_key_scancode(scan_code: int, keydown: bool):
@@ -68,16 +56,4 @@ def mouse_left_up():
     inp.union.mi = MOUSEINPUT(0, 0, 0, MOUSEEVENTF_LEFTUP, 0, 0)
     SendInput(1, ctypes.byref(inp), ctypes.sizeof(inp))
 
-def mouse_left_click_once(click_down_ms: float = 35):
-    mouse_left_down()
-    time.sleep(click_down_ms / 1000.0)
-    mouse_left_up()
 
-def mouse_move(dx: int, dy: int):
-    inp = INPUT()
-    inp.type = INPUT_MOUSE
-    inp.union.mi = MOUSEINPUT(dx, dy, 0, MOUSEEVENTF_MOVE, 0, 0)
-    SendInput(1, ctypes.byref(inp), ctypes.sizeof(inp))
-
-def mouse_set_pos(x: int, y: int):
-    ctypes.windll.user32.SetCursorPos(x, y)

@@ -15,8 +15,8 @@ OUT_NAME="RiskYourLife-Macros.exe"
 PRODUCT_NAME="RiskYourLife-Macros"
 FILE_DESC="Compatible with All Kind of RiskYourLife"
 COMPANY="Pari Malam"
-FILE_VER="1.8"      # must be 4-part
-PRODUCT_VER="1.8"   # make product version 4-part too
+FILE_VER="1.9"      # must be 4-part
+PRODUCT_VER="1.9"   # make product version 4-part too
 COPYRIGHT="(c) 2025 Pari Malam"
 
 NUITKA_FLAGS=(
@@ -109,21 +109,44 @@ if [[ -f "$OUT_NAME" ]]; then
 
   # Use 7z command
   if command -v 7z >/dev/null 2>&1; then
+    # Build list of files to include
+    FILES_TO_ARCHIVE=("$OUT_NAME")
+
+    # Check for config files and add them if they exist
+    ARCHIVE_CONTENTS="$OUT_NAME"
     if [[ -f "config.ini" ]]; then
-      7z a "$ARCHIVE_NAME" "$OUT_NAME" "config.ini"
-      if [[ -f "$ARCHIVE_NAME" ]]; then
-        ok "Archive created → ./$ARCHIVE_NAME (includes $OUT_NAME and config.ini)"
-      else
-        warn "Failed to create archive"
-      fi
+      FILES_TO_ARCHIVE+=("config.ini")
+      ARCHIVE_CONTENTS="$ARCHIVE_CONTENTS and config.ini"
+    fi
+
+    if [[ -f "position.ini" ]]; then
+      FILES_TO_ARCHIVE+=("position.ini")
+      ARCHIVE_CONTENTS="$ARCHIVE_CONTENTS and position.ini"
+    fi
+
+    # Create archive with all files
+    7z a "$ARCHIVE_NAME" "${FILES_TO_ARCHIVE[@]}"
+
+    if [[ -f "$ARCHIVE_NAME" ]]; then
+      ok "Archive created → ./$ARCHIVE_NAME (includes $ARCHIVE_CONTENTS)"
+
+      # Clean up build folders after successful archive
+      info "Cleaning up build folders..."
+      for path in \
+        "${APP_NAME}.build" \
+        "${APP_NAME}.dist" \
+        "${APP_NAME}.onefile-build"
+      do
+        if [[ -e "$path" ]]; then
+          info "Removing: $path"
+          rm -rf "$path"
+        else
+          info "Skip (not found): $path"
+        fi
+      done
+      ok "Build folder cleanup complete."
     else
-      warn "config.ini not found, archiving only executable"
-      7z a "$ARCHIVE_NAME" "$OUT_NAME"
-      if [[ -f "$ARCHIVE_NAME" ]]; then
-        ok "Archive created → ./$ARCHIVE_NAME (includes $OUT_NAME only)"
-      else
-        warn "Failed to create archive"
-      fi
+      warn "Failed to create archive"
     fi
   else
     warn "7z command not found. Skipping archive creation."

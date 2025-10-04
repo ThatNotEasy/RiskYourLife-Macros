@@ -4,13 +4,20 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up, send_key_scancode
-from modules.clients import Colors, print_client_info
+from modules.clients import Colors, print_client_info, kill_target_processes
 from modules.config import parse_hotkey_string, save_config, load_config
 from modules.antidebug import AntiDebug
+from modules.inputs import *
 import time, signal
 import colorama
+import pyperclip  # For clipboard operations
+import pyautogui  # For keyboard automation
+import ctypes
 
 colorama.init()
+
+# SendInput for keyboard/mouse simulation
+SendInput = ctypes.windll.user32.SendInput
 
 # Try to import MEOWING, but make it optional
 try:
@@ -84,6 +91,8 @@ class GameMacro:
         self.config = load_config()
         # Initialize anti-debug protection to prevent reverse engineering
         self.anti_debug = AntiDebug(check_interval=3.0, auto_close=True)
+        # Auto offer state
+        self.auto_offer_on = False
         self.setup_callbacks()
         
     def setup_callbacks(self):
@@ -98,12 +107,13 @@ class GameMacro:
             HK_TOGGLE_AUTO_MOVE2: self.toggle_auto_move2,  # A + D
             HK_TOGGLE_AUTO_UNPACK: self.toggle_auto_unpack,  # NEW
             HK_TOGGLE_MOUSE_360: self.toggle_mouse_360,  # 360 mouse
+            HK_AUTO_OFFER: self.toggle_auto_offer,  # Auto Offer with ALT+0
             HK_EXIT: self.exit_app,
             HK_CONFIG_CHANGE: self.change_config
         }
         
     def build_status_line(self):
-        display_name = 'RYL2/RYL1'
+        display_name = 'RiskYourLife'
         game_running = self.worker_manager.is_game_running()
         game_status = f"{Colors.BRIGHT_GREEN}● [READY]{Colors.RESET}" if game_running else f"{Colors.BRIGHT_RED}● [GAME NOT FOUND]{Colors.RESET}"
 
@@ -117,7 +127,8 @@ class GameMacro:
             "Auto Move A+D": "AUTO_MOVE2",
             "Auto Resser": "AUTO_RESSER",
             "Auto Unpack": "AUTO_UNPACK",
-            "Mouse 360": "MOUSE_360"
+            "Mouse 360": "MOUSE_360",
+            "Auto Offer": "AUTO_OFFER"
         }
 
         # Prepare the 2-column matrix (left, right)
@@ -132,7 +143,7 @@ class GameMacro:
             ((self.worker_manager.loop_resser_on,          "Auto Resser"),
             (self.worker_manager.loop_auto_unpack_on,     "Auto Unpack")),
             ((self.worker_manager.loop_mouse_360_on,       "Mouse 360"),
-            (None,                                         "")),
+            (self.worker_manager.auto_offer_on,                          "Auto Offer")),
         ]
 
         # Fixed widths to keep the UI perfectly stable
@@ -151,7 +162,12 @@ class GameMacro:
             hotkey = ""
             if label in feature_hotkeys:
                 config_key = feature_hotkeys[label]
-                hotkey = self.config['RiskYourLife-Macros'].get(config_key, "")
+                if config_key == "ALT+0":
+                    # Special case for Auto Offer - hardcoded hotkey
+                    hotkey = config_key
+                else:
+                    # Normal case - get from config
+                    hotkey = self.config['RiskYourLife-Macros'].get(config_key, "")
                 hotkey = hotkey[:HOTKEY_W]  # truncate if too long
             # align: indicator is variable-color but constant-visible width
             return f"{dot} {Colors.BRIGHT_WHITE}{label:<{LABEL_W}}{Colors.RESET} {Colors.BRIGHT_CYAN}{hotkey:<{HOTKEY_W}}{Colors.RESET}"
@@ -201,8 +217,9 @@ class GameMacro:
                 ('7', 'Auto Move A+D', self.config['RiskYourLife-Macros']['AUTO_MOVE2']),
                 ('8', 'Auto Resser', self.config['RiskYourLife-Macros']['AUTO_RESSER']),
                 ('9', 'Auto Unpack', self.config['RiskYourLife-Macros']['AUTO_UNPACK']),
-                ('10', 'Mouse 360', self.config['RiskYourLife-Macros']['MOUSE_360']),
-                ('11', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
+                ('10', 'Auto Offer', self.config['RiskYourLife-Macros']['AUTO_OFFER']),
+                ('11', 'Mouse 360', self.config['RiskYourLife-Macros']['MOUSE_360']),
+                ('12', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
                 ('0', 'Cancel', '')
             ]
 
@@ -215,7 +232,7 @@ class GameMacro:
             print()
 
             try:
-                choice = input(f"{Colors.BRIGHT_YELLOW}Enter choice (0-11): {Colors.RESET}").strip()
+                choice = input(f"{Colors.BRIGHT_YELLOW}Enter choice (0-12): {Colors.RESET}").strip()
                 if choice == '0':
                     print()
                     return  # Exit the configuration menu
@@ -230,8 +247,9 @@ class GameMacro:
                     '7': 'AUTO_MOVE2',
                     '8': 'AUTO_RESSER',
                     '9': 'AUTO_UNPACK',
-                    '10': 'MOUSE_360',
-                    '11': 'QUIT_SCRIPT'
+                    '10': 'AUTO_OFFER',
+                    '11': 'MOUSE_360',
+                    '12': 'QUIT_SCRIPT'
                 }
 
                 if choice in option_mapping:
@@ -362,6 +380,14 @@ class GameMacro:
             self.worker_manager.mouse_360_event.clear()
         self.render_status()
 
+    def toggle_auto_offer(self):
+        self.worker_manager.auto_offer_on = not self.worker_manager.auto_offer_on
+        if self.worker_manager.auto_offer_on:
+            self.worker_manager.auto_offer_event.set()
+        else:
+            self.worker_manager.auto_offer_event.clear()
+        self.render_status()
+
     def exit_app(self):
         """Exit the application gracefully"""
         global meow_instance, _shutdown_in_progress
@@ -372,7 +398,7 @@ class GameMacro:
         _shutdown_in_progress = True
 
         try:
-            print(f"\n{Colors.BRIGHT_YELLOW} [INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}")
+            print(f"{Colors.BRIGHT_YELLOW} [INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}\n")
             if MEOWING_AVAILABLE and meow_instance and hasattr(meow_instance, 'stop'):
                 meow_instance.stop()
         except Exception:
@@ -408,6 +434,7 @@ class GameMacro:
             (self.config['RiskYourLife-Macros']['AUTO_MOVE2'], "Auto Move A+D"),
             (self.config['RiskYourLife-Macros']['AUTO_RESSER'], "Auto Resser"),
             (self.config['RiskYourLife-Macros']['AUTO_UNPACK'], "Auto Unpack Gold"),
+            (self.config['RiskYourLife-Macros']['AUTO_OFFER'], "Auto Offer"),
             (self.config['RiskYourLife-Macros']['MOUSE_360'], "Mouse 360"),
             ("ALT+C", "Change HotKeys"),
             (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program")
@@ -422,6 +449,7 @@ class GameMacro:
         # Status indicators
         self.render_status()
         print()
+        kill_target_processes()
 
         print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Please start the game manually. Macros are ready to use.{Colors.RESET}")
         self.worker_manager.start_workers()
