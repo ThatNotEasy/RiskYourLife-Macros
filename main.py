@@ -1,4 +1,4 @@
-# main.py - fixed version
+# main.py - fixed version with integrated status column
 from modules.banners import clear_and_print
 from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
@@ -80,9 +80,9 @@ def signal_handler(signum, frame):
 
 def status_indicator(is_on):
     if is_on:
-        return f"{Colors.BRIGHT_GREEN}● [ON] {Colors.RESET}"
+        return f"{Colors.BRIGHT_GREEN}● [ON]      {Colors.RESET}"
     else:
-        return f"{Colors.BRIGHT_RED}● [OFF]{Colors.RESET}"
+        return f"{Colors.BRIGHT_RED}● [OFF]     {Colors.RESET}"
 
 
 class GameMacro:
@@ -115,76 +115,65 @@ class GameMacro:
     def build_status_line(self):
         display_name = 'RiskYourLife'
         game_running = self.worker_manager.is_game_running()
+        master_status = status_indicator(self.worker_manager.master_on)
         game_status = f"{Colors.BRIGHT_GREEN}● [READY]{Colors.RESET}" if game_running else f"{Colors.BRIGHT_RED}● [GAME NOT FOUND]{Colors.RESET}"
 
-        # Map features to their config keys for hotkeys
-        feature_hotkeys = {
-            "Auto Picker": "AUTO_PICKER",
-            "Auto Hit": "AUTO_HITTING",
-            "Auto Skill": "AUTO_SKILL_ATTACK",
-            "Auto Jump": "AUTO_JUMP",
-            "Auto Move W+S": "AUTO_MOVE",
-            "Auto Move A+D": "AUTO_MOVE2",
-            "Auto Resser": "AUTO_RESSER",
-            "Auto Unpack": "AUTO_UNPACK",
-            "Mouse 360": "MOUSE_360",
-            "Auto Offer": "AUTO_OFFER"
+        # Feature status mapping
+        feature_status = {
+            "Auto Picker": self.worker_manager.loop_e_on,
+            "Auto Hit": self.worker_manager.loop_click_on,
+            "Auto Skill": self.worker_manager.loop_skill_attack_on,
+            "Auto Jump": self.worker_manager.loop_combined_action_on,
+            "Auto Move W+S": self.worker_manager.loop_auto_move_on,
+            "Auto Move A+D": self.worker_manager.loop_auto_move2_on,
+            "Auto Resser": self.worker_manager.loop_resser_on,
+            "Auto Unpack": self.worker_manager.loop_auto_unpack_on,
+            "Mouse 360": self.worker_manager.loop_mouse_360_on,
+            "Auto Offer": self.worker_manager.auto_offer_on
         }
 
-        # Prepare the 2-column matrix (left, right)
-        # (flag_bool, label)
-        rows = [
-            ((self.worker_manager.loop_e_on,               "Auto Picker"),
-            (self.worker_manager.loop_click_on,           "Auto Hit")),
-            ((self.worker_manager.loop_skill_attack_on,    "Auto Skill"),
-            (self.worker_manager.loop_combined_action_on, "Auto Jump")),
-            ((self.worker_manager.loop_auto_move_on,       "Auto Move W+S"),
-            (self.worker_manager.loop_auto_move2_on,      "Auto Move A+D")),
-            ((self.worker_manager.loop_resser_on,          "Auto Resser"),
-            (self.worker_manager.loop_auto_unpack_on,     "Auto Unpack")),
-            ((self.worker_manager.loop_mouse_360_on,       "Mouse 360"),
-            (self.worker_manager.auto_offer_on,                          "Auto Offer")),
-        ]
+        # Build the integrated status display
+        header = f"\n{Colors.BRIGHT_CYAN} Status: {master_status} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  {game_status} {Colors.BRIGHT_WHITE}{display_name}{Colors.RESET}\n"
 
-        # Fixed widths to keep the UI perfectly stable
-        INDICATOR_W = 9   # length for "● [ON]" / "● [OFF]"
-        LABEL_W     = 17  # length for the feature name
-        HOTKEY_W    = 8   # length for hotkey like "ALT+1"
-        CELL_W      = INDICATOR_W + 1 + LABEL_W + 1 + HOTKEY_W  # indicator + space + label + space + hotkey
-        GAP         = "  "  # gap between the two columns
-
-        def cell(flag_and_label):
-            flag, label = flag_and_label
-            if flag is None and not label:
-                # empty cell
-                return " " * CELL_W
-            dot = status_indicator(flag)  # already colored "● [ON]/[OFF]"
-            hotkey = ""
-            if label in feature_hotkeys:
-                config_key = feature_hotkeys[label]
-                if config_key == "ALT+0":
-                    # Special case for Auto Offer - hardcoded hotkey
-                    hotkey = config_key
-                else:
-                    # Normal case - get from config
-                    hotkey = self.config['RiskYourLife-Macros'].get(config_key, "")
-                hotkey = hotkey[:HOTKEY_W]  # truncate if too long
-            # align: indicator is variable-color but constant-visible width
-            return f"{dot} {Colors.BRIGHT_WHITE}{label:<{LABEL_W}}{Colors.RESET} {Colors.BRIGHT_CYAN}{hotkey:<{HOTKEY_W}}{Colors.RESET}"
-
-        header = (
-            f"\n{Colors.BRIGHT_CYAN} Status: "
-            f"{status_indicator(self.worker_manager.master_on)} "
-            f"{Colors.BRIGHT_WHITE}Master{Colors.RESET}  "
-            f"{game_status} {Colors.BRIGHT_WHITE}{display_name}{Colors.RESET}"
+        # Create the integrated table with HOTKEY, ACTION, and STATUS
+        table_header = (
+            f"{Colors.BRIGHT_MAGENTA}╔══════════════╦══════════════════════════════════════════╦══════════════╗{Colors.RESET}\n"
+            f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'HOTKEY':<12} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'ACTION':<40} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{'STATUS':<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}\n"
+            f"{Colors.BRIGHT_MAGENTA}╠══════════════╬══════════════════════════════════════════╬══════════════╣{Colors.RESET}"
         )
 
-        body_lines = []
-        for left, right in rows:
-            body_lines.append(f" {cell(left)}{GAP}{cell(right)}")
+        # Hotkey data with integrated status
+        hotkeys = [
+            (self.config['RiskYourLife-Macros']['START_SCRIPT'], "On/Off Macros Mode", "Master"),
+            (self.config['RiskYourLife-Macros']['AUTO_PICKER'], "Auto Picker", "Auto Picker"),
+            (self.config['RiskYourLife-Macros']['AUTO_HITTING'], "Auto Hitting", "Auto Hit"),
+            (self.config['RiskYourLife-Macros']['AUTO_SKILL_ATTACK'], "Auto Skill", "Auto Skill"),
+            (self.config['RiskYourLife-Macros']['AUTO_JUMP'], "Auto Jump", "Auto Jump"),
+            (self.config['RiskYourLife-Macros']['AUTO_MOVE'], "Auto Move W+S", "Auto Move W+S"),
+            (self.config['RiskYourLife-Macros']['AUTO_MOVE2'], "Auto Move A+D", "Auto Move A+D"),
+            (self.config['RiskYourLife-Macros']['AUTO_RESSER'], "Auto Resser", "Auto Resser"),
+            (self.config['RiskYourLife-Macros']['AUTO_UNPACK'], "Auto Unpack Gold", "Auto Unpack"),
+            (self.config['RiskYourLife-Macros']['AUTO_OFFER'], "Auto Offer", "Auto Offer"),
+            (self.config['RiskYourLife-Macros']['MOUSE_360'], "Mouse 360", "Mouse 360"),
+            ("ALT+C", "Change HotKeys", ""),
+            (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program", "")
+        ]
 
-        return header + "\n\n" + "\n".join(body_lines) + "\n"
+        table_rows = []
+        for key, action, status_key in hotkeys:
+            if status_key == "Master":
+                status_display = status_indicator(self.worker_manager.master_on)
+            elif status_key and status_key in feature_status:
+                status_display = status_indicator(feature_status[status_key])
+            else:
+                status_display = " " * 9  # Empty status for non-feature rows
+            
+            table_rows.append(
+                f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{key:<12} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{action:<40} {Colors.BRIGHT_MAGENTA}║ {status_display:<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}"
+            )
 
+        table_footer = f"{Colors.BRIGHT_MAGENTA}╚══════════════╩══════════════════════════════════════════╩══════════════╝{Colors.RESET}"
+        return header + table_header + "\n" + "\n".join(table_rows) + "\n" + table_footer
 
     def render_status(self):
         line = self.build_status_line()
@@ -398,6 +387,7 @@ class GameMacro:
         _shutdown_in_progress = True
 
         try:
+            print()
             print(f"{Colors.BRIGHT_YELLOW} [INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}\n")
             if MEOWING_AVAILABLE and meow_instance and hasattr(meow_instance, 'stop'):
                 meow_instance.stop()
@@ -412,41 +402,7 @@ class GameMacro:
         clear_and_print()  # Clear screen and show banner
         print_client_info()
         
-        # Beautiful hotkey information display
-        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
-        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{' GAME MACRO - HOTKEYS '.center(60)}{Colors.RESET}")
-        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
-        print()
-
-        # Hotkey table with perfect alignment
-        print(f"{Colors.BRIGHT_MAGENTA}╔══════════════╦══════════════════════════════════════════╗{Colors.RESET}")
-        print(f"{Colors.BRIGHT_CYAN}║ {Colors.BRIGHT_CYAN}{'HOTKEY':<12} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'ACTION':<40} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
-        print(f"{Colors.BRIGHT_MAGENTA}╠══════════════╬══════════════════════════════════════════╣{Colors.RESET}")
-
-        # Hotkey data with consistent spacing
-        hotkeys = [
-            (self.config['RiskYourLife-Macros']['START_SCRIPT'], "On/Off Macros Mode"),
-            (self.config['RiskYourLife-Macros']['AUTO_PICKER'], "Auto Picker"),
-            (self.config['RiskYourLife-Macros']['AUTO_HITTING'], "Auto Hitting"),
-            (self.config['RiskYourLife-Macros']['AUTO_SKILL_ATTACK'], "Auto Skill"),
-            (self.config['RiskYourLife-Macros']['AUTO_JUMP'], "Auto Jump"),
-            (self.config['RiskYourLife-Macros']['AUTO_MOVE'], "Auto Move W+S"),
-            (self.config['RiskYourLife-Macros']['AUTO_MOVE2'], "Auto Move A+D"),
-            (self.config['RiskYourLife-Macros']['AUTO_RESSER'], "Auto Resser"),
-            (self.config['RiskYourLife-Macros']['AUTO_UNPACK'], "Auto Unpack Gold"),
-            (self.config['RiskYourLife-Macros']['AUTO_OFFER'], "Auto Offer"),
-            (self.config['RiskYourLife-Macros']['MOUSE_360'], "Mouse 360"),
-            ("ALT+C", "Change HotKeys"),
-            (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program")
-        ]
-
-        for key, action in hotkeys:
-            print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{key:<12} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{action:<40} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
-
-        print(f"{Colors.BRIGHT_MAGENTA}╚══════════════╩══════════════════════════════════════════╝{Colors.RESET}")
-        print()
-        
-        # Status indicators
+        # Display the integrated status table
         self.render_status()
         print()
         kill_target_processes()
