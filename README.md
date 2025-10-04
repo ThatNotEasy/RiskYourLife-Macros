@@ -50,13 +50,6 @@
 
 ## ⚙️ Configuration
 
-### Auto Offer Setup:
-1. **Prepare your offer message** (e.g., "WTS [item] PST")
-2. **Copy the message** to clipboard
-3. **Press ALT+0** to enable auto offer
-4. **Switch to game/chat window**
-5. Offers will be sent automatically every 14 seconds
-
 ### Mouse 360 Setup:
 1. **Create `position.ini`** file with format:
    ```

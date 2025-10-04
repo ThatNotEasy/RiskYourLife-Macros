@@ -1,4 +1,3 @@
-# main.py - fixed version with integrated status column
 from modules.banners import clear_and_print
 from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
@@ -10,16 +9,14 @@ from modules.antidebug import AntiDebug
 from modules.inputs import *
 import time, signal
 import colorama
-import pyperclip  # For clipboard operations
-import pyautogui  # For keyboard automation
+import pyperclip
+import pyautogui
 import ctypes
 
 colorama.init()
 
-# SendInput for keyboard/mouse simulation
 SendInput = ctypes.windll.user32.SendInput
 
-# Try to import MEOWING, but make it optional
 try:
     from modules.meowing import MEOWING
     MEOWING_AVAILABLE = True
@@ -28,53 +25,44 @@ except ImportError:
     MEOWING = None
     print(f"{Colors.BRIGHT_YELLOW}[WARNING] MEOWING module not available - some features may be limited{Colors.RESET}")
 
-# Global MEOWING instance
 meow_instance = None
 
-# Config
 CONFIG = {
-    'E_DELAY': 0.4,           # interval between repeating "E" presses (seconds)
-    'CLICK_DELAY': 0.05,      # interval between clicks (seconds)
-    'CLICK_DOWN_MS': 35.0,      # hold down for each click before release (ms)
-    'PRINT_STATUS': True,      # console logs on/off
-    'MOUSE_360_BASE_WIDTH': 1000,   # base width for position scaling
-    'MOUSE_360_BASE_HEIGHT': 600,   # base height for position scaling
-    'MOUSE_360_CPU_OPTIMIZED': True, # reduce CPU usage when enabled
-    'MOUSE_360_SPEED': 0.5,         # movement speed multiplier (0.1 = slow, 1.0 = fast)
-    'MOUSE_360_DELAY': 0.2,         # delay between position changes (seconds)
-    'MOUSE_360_SMOOTH_MOVEMENT': True # use smooth movement instead of instant jumps
+    'E_DELAY': 0.4,
+    'CLICK_DELAY': 0.05,
+    'CLICK_DOWN_MS': 35.0,
+    'PRINT_STATUS': True,
+    'MOUSE_360_BASE_WIDTH': 1000,
+    'MOUSE_360_BASE_HEIGHT': 600,
+    'MOUSE_360_CPU_OPTIMIZED': True,
+    'MOUSE_360_SPEED': 0.5,
+    'MOUSE_360_DELAY': 0.2,
+    'MOUSE_360_SMOOTH_MOVEMENT': True
 }
 
 def p(msg):
     if CONFIG['PRINT_STATUS']:
         print(msg, flush=True)
 
-# Global flag to prevent multiple signal handler calls
 _shutdown_in_progress = False
 
 def signal_handler(signum, frame):
-    """Handle shutdown signals gracefully"""
     global meow_instance, _shutdown_in_progress
 
-    # Prevent multiple calls during shutdown
     if _shutdown_in_progress:
         return
 
     _shutdown_in_progress = True
 
     try:
-        # Only attempt to stop meow_instance if we're not in Python's shutdown phase
         if MEOWING_AVAILABLE and meow_instance and hasattr(meow_instance, 'stop'):
             try:
                 meow_instance.stop()
             except Exception:
-                # Ignore errors during shutdown
                 pass
     except Exception:
-        # Ignore all errors during shutdown
         pass
 
-    # Use sys.exit for cleaner shutdown
     import sys
     sys.exit(0)
 
@@ -89,9 +77,7 @@ class GameMacro:
     def __init__(self):
         self.worker_manager = WorkerManager(CONFIG)
         self.config = load_config()
-        # Initialize anti-debug protection to prevent reverse engineering
         self.anti_debug = AntiDebug(check_interval=3.0, auto_close=True)
-        # Auto offer state
         self.auto_offer_on = False
         self.setup_callbacks()
         
@@ -100,14 +86,14 @@ class GameMacro:
             HK_TOGGLE_MASTER: self.toggle_master,
             HK_TOGGLE_E: self.toggle_e,
             HK_TOGGLE_CLICK: self.toggle_click,
-            HK_TOGGLE_SKILL_ATTACK: self.toggle_skill_attack,  # NEW
+            HK_TOGGLE_SKILL_ATTACK: self.toggle_skill_attack,
             HK_TOGGLE_AUTO_RESSER: self.toggle_resser,
-            HK_TOGGLE_COMBINED_ACTION: self.toggle_combined_action,  # Auto Jump
-            HK_TOGGLE_AUTO_MOVE: self.toggle_auto_move,  # W + S
-            HK_TOGGLE_AUTO_MOVE2: self.toggle_auto_move2,  # A + D
-            HK_TOGGLE_AUTO_UNPACK: self.toggle_auto_unpack,  # NEW
-            HK_TOGGLE_MOUSE_360: self.toggle_mouse_360,  # 360 mouse
-            HK_AUTO_OFFER: self.toggle_auto_offer,  # Auto Offer with ALT+0
+            HK_TOGGLE_COMBINED_ACTION: self.toggle_combined_action,
+            HK_TOGGLE_AUTO_MOVE: self.toggle_auto_move,
+            HK_TOGGLE_AUTO_MOVE2: self.toggle_auto_move2,
+            HK_TOGGLE_AUTO_UNPACK: self.toggle_auto_unpack,
+            HK_TOGGLE_MOUSE_360: self.toggle_mouse_360,
+            HK_AUTO_OFFER: self.toggle_auto_offer,
             HK_EXIT: self.exit_app,
             HK_CONFIG_CHANGE: self.change_config
         }
@@ -118,7 +104,6 @@ class GameMacro:
         master_status = status_indicator(self.worker_manager.master_on)
         game_status = f"{Colors.BRIGHT_GREEN}● [READY]{Colors.RESET}" if game_running else f"{Colors.BRIGHT_RED}● [GAME NOT FOUND]{Colors.RESET}"
 
-        # Feature status mapping
         feature_status = {
             "Auto Picker": self.worker_manager.loop_e_on,
             "Auto Hit": self.worker_manager.loop_click_on,
@@ -132,17 +117,14 @@ class GameMacro:
             "Auto Offer": self.worker_manager.auto_offer_on
         }
 
-        # Build the integrated status display
         header = f"\n{Colors.BRIGHT_CYAN} Status: {master_status} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  {game_status} {Colors.BRIGHT_WHITE}{display_name}{Colors.RESET}\n"
 
-        # Create the integrated table with HOTKEY, ACTION, and STATUS
         table_header = (
             f"{Colors.BRIGHT_MAGENTA}╔══════════════╦══════════════════════════════════════════╦══════════════╗{Colors.RESET}\n"
             f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'HOTKEY':<12} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'ACTION':<40} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{'STATUS':<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}\n"
             f"{Colors.BRIGHT_MAGENTA}╠══════════════╬══════════════════════════════════════════╬══════════════╣{Colors.RESET}"
         )
 
-        # Hotkey data with integrated status
         hotkeys = [
             (self.config['RiskYourLife-Macros']['START_SCRIPT'], "On/Off Macros Mode", "Master"),
             (self.config['RiskYourLife-Macros']['AUTO_PICKER'], "Auto Picker", "Auto Picker"),
@@ -177,25 +159,21 @@ class GameMacro:
 
     def render_status(self):
         line = self.build_status_line()
-        # Print as a block (no trailing clutter). The extra spaces help clear older, longer lines.
         print("\r" + line + (" " * 8), end="", flush=True)
         
     def change_config(self):
-        while True:  # Use a loop instead of recursion to prevent stack overflow
+        while True:
             clear_and_print()
 
-            # Beautiful configuration menu display
             print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
             print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{' CONFIGURATION MENU '.center(60)}{Colors.RESET}")
             print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
             print()
 
-            # Configuration table with perfect alignment
             print(f"{Colors.BRIGHT_MAGENTA}╔════════╦══════════════════════════════════════════╦══════════════╗{Colors.RESET}")
             print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'OPTION':<6} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'FUNCTION':<40} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{'HOTKEY':<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
             print(f"{Colors.BRIGHT_MAGENTA}╠════════╬══════════════════════════════════════════╬══════════════╣{Colors.RESET}")
 
-            # Configuration options with consistent spacing
             options = [
                 ('1', 'Start/Stop Script', self.config['RiskYourLife-Macros']['START_SCRIPT']),
                 ('2', 'Auto Picker', self.config['RiskYourLife-Macros']['AUTO_PICKER']),
@@ -252,7 +230,6 @@ class GameMacro:
                     new_value = input(f"{Colors.BRIGHT_YELLOW}Enter new hotkey: {Colors.RESET}").strip().upper()
 
                     if new_value:
-                        # Validate the hotkey format
                         try:
                             parse_hotkey_string(new_value)
                             self.config['RiskYourLife-Macros'][config_key] = new_value
@@ -260,25 +237,20 @@ class GameMacro:
                             print(f"\n{Colors.BRIGHT_GREEN}Hotkey updated successfully!{Colors.RESET}")
                             print(f"{Colors.BRIGHT_YELLOW}Please restart the application for changes to take effect.{Colors.RESET}")
 
-                            # Ask if user wants to continue editing
                             continue_editing = input(f"\n{Colors.BRIGHT_YELLOW}Edit another hotkey? (y/n): {Colors.RESET}").strip().lower()
                             if continue_editing not in ('y', 'yes'):
                                 return  # Exit the configuration menu
-                            # If 'y' or 'yes', continue the loop to show menu again
 
                         except Exception as e:
                             print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
                             print(f"{Colors.BRIGHT_YELLOW}Please try again with a valid hotkey format.{Colors.RESET}")
                             input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
-                            # Continue the loop to restart the config menu
                     else:
                         print(f"\n{Colors.BRIGHT_RED}No value entered, keeping current setting.{Colors.RESET}")
                         input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
-                        # Continue the loop to restart the config menu
                 else:
                     print(f"\n{Colors.BRIGHT_RED}Invalid choice.{Colors.RESET}")
                     input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
-                    # Continue the loop to restart the config menu
 
             except Exception as e:
                 print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
@@ -402,7 +374,7 @@ class GameMacro:
         clear_and_print()  # Clear screen and show banner
         print_client_info()
         
-        # Display the integrated status table
+        self.render_status()
         self.render_status()
         print()
         kill_target_processes()

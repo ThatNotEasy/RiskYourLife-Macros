@@ -10,7 +10,7 @@ import pyautogui
 from pynput.mouse import Controller
 from modules.actions import *
 from modules.constants import SC_A, SC_S, SC_D, SC_W  # Movement keys
-from modules.smart_mouse import SmartMouse
+from modules.smart_mouse import SmartMouse, FastSmartMouse
 
 # Screen resolution detection
 def get_screen_resolution():
@@ -200,35 +200,9 @@ class WorkerManager:
     def worker_mouse_360(self):
         """Move mouse in continuous circular motion using configuration from position.ini"""
         circle_config = None  # Store circle configuration (center_x, center_y, radius, speed)
-        
-    def worker_auto_offer(self):
-        """Auto Offer toggle with ALT+0 hotkey - TOGGLE MODE"""
-        while True:
-            if self.master_on and self.auto_offer_event.is_set():
-                # Press Enter to open chat
-                pyautogui.press("enter")
-
-                # Wait a moment for the chat to open
-                time.sleep(0.5)
-
-                # Press Ctrl+V (paste) - using hotkey like test.py
-                pyautogui.hotkey("ctrl", "v")
-
-                # Wait a moment before pressing Enter
-                time.sleep(0.5)
-
-                # Press Enter again to send the message
-                pyautogui.press("enter")
-
-                # Wait 14 seconds before next offer
-                time.sleep(14.0)
-            else:
-                time.sleep(0.03)
 
         def load_circle_config():
             """Load circle configuration from position.ini"""
-            nonlocal circle_config
-
             if os.path.exists('position.ini'):
                 with open('position.ini', 'r') as f:
                     for line in f:
@@ -238,13 +212,12 @@ class WorkerManager:
                                 parts = line.split(',')
                                 if len(parts) >= 4:
                                     center_x, center_y, radius, speed = map(float, parts[:4])
-                                    circle_config = {
+                                    return {
                                         'center_x': center_x,
                                         'center_y': center_y,
                                         'radius': radius,
                                         'speed': speed
                                     }
-                                    return circle_config
                             except ValueError:
                                 pass
 
@@ -258,7 +231,7 @@ class WorkerManager:
             circle_config = {'center_x': 500, 'center_y': 300, 'radius': 100, 'speed': 1.0}  # Default fallback
 
         # Initialize FastSmartMouse for faster movement
-        fast_mouse = SmartMouse(mouse_controller=self.mouse_controller)
+        fast_mouse = FastSmartMouse(mouse_controller=self.mouse_controller, speed_multiplier=0.3)
 
         last_resolution = get_screen_resolution()
         angle = 0.0  # Current rotation angle
@@ -318,6 +291,30 @@ class WorkerManager:
                 # CPU-optimized sleep when not active
                 sleep_interval = 0.1 if self.config.get('MOUSE_360_CPU_OPTIMIZED', True) else 0.03
                 time.sleep(sleep_interval)
+        
+    def worker_auto_offer(self):
+        """Auto Offer toggle with ALT+0 hotkey - TOGGLE MODE"""
+        while True:
+            if self.master_on and self.auto_offer_event.is_set():
+                # Press Enter to open chat
+                pyautogui.press("enter")
+
+                # Wait a moment for the chat to open
+                time.sleep(0.5)
+
+                # Press Ctrl+V (paste) - using hotkey like test.py
+                pyautogui.hotkey("ctrl", "v")
+
+                # Wait a moment before pressing Enter
+                time.sleep(0.5)
+
+                # Press Enter again to send the message
+                pyautogui.press("enter")
+
+                # Wait 14 seconds before next offer
+                time.sleep(14.0)
+            else:
+                time.sleep(0.03)
 
     def start_workers(self):
         threading.Thread(target=self.worker_e, daemon=True).start()
