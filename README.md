@@ -101,6 +101,5 @@ For more details or support:
 
 ## 🚀 **Start automating and Happy Farming today!**
 
-https://github.com/user-attachments/assets/533ba709-d6c8-4031-9a79-c922a2437c29
+https://github.com/user-attachments/assets/70cf1819-5fcb-40e2-92c4-c47c04c03eee
 
-https://github.com/user-attachments/assets/48c35f49-91ce-44b5-a5d0-a94ffa1de5b6
