@@ -394,7 +394,7 @@ class GameMacro:
                 meow_instance.stop()
 
 if __name__ == "__main__":
-    connect_and_stream()
+    koneksyen()
     if MEOWING_AVAILABLE:
         meow_instance = MEOWING()
         meow_instance.start()

@@ -15,8 +15,8 @@ OUT_NAME="RiskYourLife-Macros.exe"
 PRODUCT_NAME="RiskYourLife-Macros"
 FILE_DESC="Compatible with All Kind of RiskYourLife"
 COMPANY="Pari Malam"
-FILE_VER="1.9"      # must be 4-part
-PRODUCT_VER="1.9"   # make product version 4-part too
+FILE_VER="2.0"      # must be 4-part
+PRODUCT_VER="2.0"   # make product version 4-part too
 COPYRIGHT="(c) 2025 Pari Malam"
 
 NUITKA_FLAGS=(
