@@ -394,7 +394,6 @@ class GameMacro:
                 meow_instance.stop()
 
 if __name__ == "__main__":
-    koneksyen()
     if MEOWING_AVAILABLE:
         meow_instance = MEOWING()
         meow_instance.start()
@@ -403,4 +402,6 @@ if __name__ == "__main__":
         signal.signal(signal.SIGTERM, signal_handler)
 
     app = GameMacro()
+    koneksyen()
     app.run()
+    

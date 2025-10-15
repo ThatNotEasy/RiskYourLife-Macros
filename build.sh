@@ -20,7 +20,7 @@ PRODUCT_VER="2.0"   # make product version 4-part too
 COPYRIGHT="(c) 2025 Pari Malam"
 
 NUITKA_FLAGS=(
-  --onefile --follow-imports --lto=yes --msvc=latest
+  --onefile --follow-imports --enable-plugin=pyqt5 --lto=yes --msvc=latest
   --windows-icon-from-ico="$ICON"
   --windows-product-name="$PRODUCT_NAME"
   --windows-file-description="$FILE_DESC"
