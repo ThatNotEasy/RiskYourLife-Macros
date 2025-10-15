@@ -3,14 +3,12 @@ from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
 from modules.actions import mouse_left_up, send_key_scancode
-from modules.clients import Colors, print_client_info, kill_target_processes
+from modules.clients import Colors, print_client_info, kill_target_processes, koneksyen
 from modules.config import parse_hotkey_string, save_config, load_config
 from modules.antidebug import AntiDebug
 from modules.inputs import *
 import time, signal
 import colorama
-import pyperclip
-import pyautogui
 import ctypes
 
 colorama.init()
@@ -32,12 +30,12 @@ CONFIG = {
     'CLICK_DELAY': 0.05,
     'CLICK_DOWN_MS': 35.0,
     'PRINT_STATUS': True,
-    'MOUSE_360_BASE_WIDTH': 1000,
-    'MOUSE_360_BASE_HEIGHT': 600,
-    'MOUSE_360_CPU_OPTIMIZED': True,
-    'MOUSE_360_SPEED': 0.5,
-    'MOUSE_360_DELAY': 0.2,
-    'MOUSE_360_SMOOTH_MOVEMENT': True
+    'AUTO_MOUSE_BASE_WIDTH': 1000,
+    'AUTO_MOUSE_BASE_HEIGHT': 600,
+    'AUTO_MOUSE_CPU_OPTIMIZED': True,
+    'AUTO_MOUSE_SPEED': 0.5,
+    'AUTO_MOUSE_DELAY': 0.2,
+    'AUTO_MOUSE_SMOOTH_MOVEMENT': True
 }
 
 def p(msg):
@@ -92,7 +90,7 @@ class GameMacro:
             HK_TOGGLE_AUTO_MOVE: self.toggle_auto_move,
             HK_TOGGLE_AUTO_MOVE2: self.toggle_auto_move2,
             HK_TOGGLE_AUTO_UNPACK: self.toggle_auto_unpack,
-            HK_TOGGLE_MOUSE_360: self.toggle_mouse_360,
+            HK_TOGGLE_AUTO_MOUSE: self.toggle_auto_mouse,
             HK_AUTO_OFFER: self.toggle_auto_offer,
             HK_EXIT: self.exit_app,
             HK_CONFIG_CHANGE: self.change_config
@@ -113,7 +111,7 @@ class GameMacro:
             "Auto Move A+D": self.worker_manager.loop_auto_move2_on,
             "Auto Resser": self.worker_manager.loop_resser_on,
             "Auto Unpack": self.worker_manager.loop_auto_unpack_on,
-            "Mouse 360": self.worker_manager.loop_mouse_360_on,
+            "Auto Mouse": self.worker_manager.loop_auto_mouse_on,
             "Auto Offer": self.worker_manager.auto_offer_on
         }
 
@@ -136,7 +134,7 @@ class GameMacro:
             (self.config['RiskYourLife-Macros']['AUTO_RESSER'], "Auto Resser", "Auto Resser"),
             (self.config['RiskYourLife-Macros']['AUTO_UNPACK'], "Auto Unpack Gold", "Auto Unpack"),
             (self.config['RiskYourLife-Macros']['AUTO_OFFER'], "Auto Offer", "Auto Offer"),
-            (self.config['RiskYourLife-Macros']['MOUSE_360'], "Mouse 360", "Mouse 360"),
+            (self.config['RiskYourLife-Macros']['AUTO_MOUSE'], "Auto Mouse", "Auto Mouse"),
             ("ALT+C", "Change HotKeys", ""),
             (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program", "")
         ]
@@ -185,7 +183,7 @@ class GameMacro:
                 ('8', 'Auto Resser', self.config['RiskYourLife-Macros']['AUTO_RESSER']),
                 ('9', 'Auto Unpack', self.config['RiskYourLife-Macros']['AUTO_UNPACK']),
                 ('10', 'Auto Offer', self.config['RiskYourLife-Macros']['AUTO_OFFER']),
-                ('11', 'Mouse 360', self.config['RiskYourLife-Macros']['MOUSE_360']),
+                ('11', 'Auto Mouse', self.config['RiskYourLife-Macros']['AUTO_MOUSE']),
                 ('12', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
                 ('0', 'Cancel', '')
             ]
@@ -215,7 +213,7 @@ class GameMacro:
                     '8': 'AUTO_RESSER',
                     '9': 'AUTO_UNPACK',
                     '10': 'AUTO_OFFER',
-                    '11': 'MOUSE_360',
+                    '11': 'AUTO_MOUSE',
                     '12': 'QUIT_SCRIPT'
                 }
 
@@ -333,12 +331,12 @@ class GameMacro:
             self.worker_manager.auto_unpack_event.clear()
         self.render_status()
 
-    def toggle_mouse_360(self):
-        self.worker_manager.loop_mouse_360_on = not self.worker_manager.loop_mouse_360_on
-        if self.worker_manager.loop_mouse_360_on:
-            self.worker_manager.mouse_360_event.set()
+    def toggle_auto_mouse(self):
+        self.worker_manager.loop_auto_mouse_on = not self.worker_manager.loop_auto_mouse_on
+        if self.worker_manager.loop_auto_mouse_on:
+            self.worker_manager.auto_mouse_event.set()
         else:
-            self.worker_manager.mouse_360_event.clear()
+            self.worker_manager.auto_mouse_event.clear()
         self.render_status()
 
     def toggle_auto_offer(self):
@@ -396,6 +394,7 @@ class GameMacro:
                 meow_instance.stop()
 
 if __name__ == "__main__":
+    connect_and_stream()
     if MEOWING_AVAILABLE:
         meow_instance = MEOWING()
         meow_instance.start()

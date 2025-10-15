@@ -92,8 +92,8 @@ HK_TOGGLE_SKILL_ATTACK = 1008
 HK_TOGGLE_AUTO_MOVE = 1009      # W + S (front/back)
 HK_TOGGLE_AUTO_MOVE2 = 1012     # A + D (left/right)
 HK_TOGGLE_AUTO_UNPACK = 1011
-HK_TOGGLE_MOUSE_360 = 1013      # 360 mouse movement
-HK_AUTO_OFFER = 1014            # Auto Offer with ALT+0
+HK_AUTO_OFFER = 1013            # Auto Offer with ALT+0
+HK_TOGGLE_AUTO_MOUSE = 1014
 HK_CONFIG_CHANGE = 1007
 HK_EXIT = 1004
 

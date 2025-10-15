@@ -14,7 +14,7 @@
 ### 🏃 **Movement & Positioning**
 - **Auto Move W+S** – Fast alternating forward/backward movement for kiting
 - **Auto Move A+D** – Left/right strafing (1s left, 1s right) for positioning
-- **Mouse 360** – Circular mouse movement using configuration from `position.ini`
+- **Auto Mouse** – Circular mouse movement using configuration from `position.ini`
 - **Combined Action** – Continuous spacebar jumping for enhanced mobility
 
 ### 🎒 **Inventory Management**

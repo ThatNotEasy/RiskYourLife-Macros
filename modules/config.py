@@ -19,7 +19,8 @@ def load_config():
         'AUTO_MOVE2': 'ALT+6',
         'AUTO_RESSER': 'ALT+7',
         'AUTO_UNPACK': 'ALT+8',
-        'MOUSE_360': 'ALT+9'
+        'AUTO_OFFER': 'ALT+9',
+        'AUTO_MOUSE': 'ALT+0'
     }
     if os.path.exists(CONFIG_FILE):
         config.read(CONFIG_FILE)
@@ -105,6 +106,6 @@ def get_hotkey_id_from_name(name):
         'AUTO_MOVE2': HK_TOGGLE_AUTO_MOVE2,  # A + D
         'AUTO_RESSER': HK_TOGGLE_AUTO_RESSER,
         'AUTO_UNPACK': HK_TOGGLE_AUTO_UNPACK,
-        'MOUSE_360': HK_TOGGLE_MOUSE_360,
+        'AUTO_MOUSE': HK_TOGGLE_AUTO_MOUSE,
     }
     return mapping.get(name)

@@ -26,7 +26,8 @@ def register_hotkeys():
         'AUTO_MOVE2': HK_TOGGLE_AUTO_MOVE2,  # A + D
         'AUTO_RESSER': HK_TOGGLE_AUTO_RESSER,
         'AUTO_UNPACK': HK_TOGGLE_AUTO_UNPACK,  # NEW
-        'MOUSE_360': HK_TOGGLE_MOUSE_360,  # 360 mouse
+        'AUTO_OFFER': HK_AUTO_OFFER,  # Auto Offer
+        'AUTO_MOUSE': HK_TOGGLE_AUTO_MOUSE,  # 360 mouse
         'QUIT_SCRIPT': HK_EXIT
     }
     
@@ -43,8 +44,8 @@ def register_hotkeys():
     # Register ALT+C for config change (not in config file)
     RegisterHotKey(None, HK_CONFIG_CHANGE, MOD_ALT, 0x43)  # ALT+C
 
-    # Register ALT+0 for Auto Offer (not in config file)
-    RegisterHotKey(None, HK_AUTO_OFFER, MOD_ALT, 0x30)  # ALT+0
+    # Register ALT+9 for Auto Offer (not in config file)
+    RegisterHotKey(None, HK_AUTO_OFFER, MOD_ALT, 0x39)  # ALT+9
             
 def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_MASTER)
@@ -55,7 +56,7 @@ def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_AUTO_MOVE2)  # A + D
     UnregisterHotKey(None, HK_TOGGLE_AUTO_RESSER)
     UnregisterHotKey(None, HK_TOGGLE_AUTO_UNPACK)  # NEW
-    UnregisterHotKey(None, HK_TOGGLE_MOUSE_360)  # 360 mouse
+    UnregisterHotKey(None, HK_TOGGLE_AUTO_MOUSE)  # 360 mouse
     UnregisterHotKey(None, HK_TOGGLE_COMBINED_ACTION)
     UnregisterHotKey(None, HK_AUTO_OFFER)  # Auto Offer
     UnregisterHotKey(None, HK_CONFIG_CHANGE)

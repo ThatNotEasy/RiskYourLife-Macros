@@ -56,7 +56,7 @@ class WorkerManager:
         self.loop_auto_move_on = False     # W + S (front/back)
         self.loop_auto_move2_on = False    # A + D (left/right)
         self.loop_auto_unpack_on = False   # NEW
-        self.loop_mouse_360_on = False     # 360 mouse movement
+        self.loop_auto_mouse_on = False     # 360 mouse movement
         self.mouse_held = False  # Track if mouse left button is held down
         self.mouse_controller = Controller()  # Regular mouse controller
         self.e_event = threading.Event()
@@ -68,7 +68,7 @@ class WorkerManager:
         self.auto_move2_event = threading.Event()    # A + D
         self.auto_unpack_event = threading.Event()   # NEW
         self.auto_offer_event = threading.Event()    # Auto Offer
-        self.mouse_360_event = threading.Event()     # 360 mouse
+        self.auto_mouse_event = threading.Event()     # 360 mouse
 
     def is_game_running(self):
         """Check if the game process (MiniA.bin or Client.exe) is running"""
@@ -94,23 +94,29 @@ class WorkerManager:
                 time.sleep(0.03)
                 
     def worker_skill_attack(self):
-        """Ultra fast: Press number 2 + right click, then number 3 + right click, then number 4 + right click"""
+        """Continuous cycling: Press number 2 + right click, number 3 + right click, number 4 + right click and repeat"""
+        skill_cycle = [
+            (SC_2, "Skill 2"),
+            (SC_3, "Skill 3"),
+            (SC_4, "Skill 4")
+        ]
+
+        cycle_index = 0
+
         while True:
             if self.master_on and self.skill_attack_event.is_set() and self.is_game_running():
-                # Number 2 + right click
-                tap_key_scancode(SC_2, hold_ms=10)
-                mouse_right_click_once(self.config['CLICK_DOWN_MS'])
-                time.sleep(self.config['CLICK_DELAY'])
+                # Get current skill from cycle
+                current_sc, skill_name = skill_cycle[cycle_index]
 
-                # Number 3 + right click
-                tap_key_scancode(SC_3, hold_ms=10)
+                # Press skill key + right click
+                tap_key_scancode(current_sc, hold_ms=15)
                 mouse_right_click_once(self.config['CLICK_DOWN_MS'])
-                time.sleep(self.config['CLICK_DELAY'])
 
-                # Number 4 + right click
-                tap_key_scancode(SC_4, hold_ms=10)
-                mouse_right_click_once(self.config['CLICK_DOWN_MS'])
-                time.sleep(self.config['CLICK_DELAY'])
+                # Move to next skill in cycle
+                cycle_index = (cycle_index + 1) % len(skill_cycle)
+
+                # Very short delay between individual skills for continuous feel
+                time.sleep(0.02)  # Reduced from CLICK_DELAY (0.05s) to 0.02s
             else:
                 time.sleep(0.03)
                 
@@ -127,7 +133,7 @@ class WorkerManager:
                 time.sleep(0.01)  # Very short delay
             else:
                 # Use CPU-optimized sleep interval if enabled
-                sleep_interval = 0.1 if self.config.get('MOUSE_360_CPU_OPTIMIZED', True) else 0.03
+                sleep_interval = 0.1 if self.config.get('AUTO_MOUSE_CPU_OPTIMIZED', True) else 0.03
                 time.sleep(sleep_interval)
 
     def worker_auto_move2(self):
@@ -197,8 +203,8 @@ class WorkerManager:
             else:
                 time.sleep(0.02)
 
-    def worker_mouse_360(self):
-        """Move mouse in continuous circular motion using configuration from position.ini"""
+    def worker_auto_mouse(self):
+        """Enhanced auto mouse movement with improved continuous circular motion"""
         circle_config = None  # Store circle configuration (center_x, center_y, radius, speed)
 
         def load_circle_config():
@@ -223,20 +229,29 @@ class WorkerManager:
 
             return None
 
-        # Initialize circle configuration
+        # Initialize circle configuration with better defaults
         circle_config = load_circle_config()
 
         if not circle_config:
-            print("[!] No valid circle configuration found in position.ini - Mouse 360 worker will wait for valid config")
-            circle_config = {'center_x': 500, 'center_y': 300, 'radius': 100, 'speed': 1.0}  # Default fallback
+            # Enhanced default configuration for better auto mouse behavior
+            screen_w, screen_h = get_screen_resolution()
+            circle_config = {
+                'center_x': screen_w // 2,      # Center of screen
+                'center_y': screen_h // 2,      # Center of screen
+                'radius': min(screen_w, screen_h) // 6,  # Responsive radius
+                'speed': 1.5                    # Faster default speed
+            }
 
-        # Initialize FastSmartMouse for faster movement
-        fast_mouse = FastSmartMouse(mouse_controller=self.mouse_controller, speed_multiplier=0.3)
+        # Initialize FastSmartMouse for optimized movement
+        fast_mouse = FastSmartMouse(mouse_controller=self.mouse_controller, speed_multiplier=0.4)
 
         last_resolution = get_screen_resolution()
         angle = 0.0  # Current rotation angle
+        last_update = time.time()
 
         while True:
+            current_time = time.time()
+
             # Check if resolution changed
             current_resolution = get_screen_resolution()
             if current_resolution != last_resolution:
@@ -247,11 +262,11 @@ class WorkerManager:
             # Reload configuration in case the file was updated
             circle_config = load_circle_config() or circle_config
 
-            if self.master_on and self.mouse_360_event.is_set() and self.is_game_running():
+            if self.master_on and self.auto_mouse_event.is_set() and self.is_game_running():
                 try:
                     # Scale circle parameters for current resolution
-                    base_width = self.config.get('MOUSE_360_BASE_WIDTH', 1000)
-                    base_height = self.config.get('MOUSE_360_BASE_HEIGHT', 600)
+                    base_width = self.config.get('AUTO_MOUSE_BASE_WIDTH', 1000)
+                    base_height = self.config.get('AUTO_MOUSE_BASE_HEIGHT', 600)
                     current_width, current_height = get_screen_resolution()
 
                     scale_x = current_width / base_width
@@ -259,38 +274,41 @@ class WorkerManager:
 
                     scaled_center_x = int(circle_config['center_x'] * scale_x)
                     scaled_center_y = int(circle_config['center_y'] * scale_y)
-                    scaled_radius = int(circle_config['radius'] * min(scale_x, scale_y))  # Use min scale to maintain aspect ratio
+                    scaled_radius = int(circle_config['radius'] * min(scale_x, scale_y))
 
-                    # Calculate next position in circle
-                    # Increase angle based on speed and delta time for smooth rotation
-                    rotation_speed = circle_config['speed'] * self.config.get('MOUSE_360_SPEED', 1.0)
-                    angle += 0.1 * rotation_speed  # Adjust this value to control rotation speed
+                    # Calculate next position in circle with improved timing
+                    rotation_speed = circle_config['speed'] * self.config.get('AUTO_MOUSE_SPEED', 1.2)
+                    delta_time = current_time - last_update
+                    angle_increment = 0.15 * rotation_speed * delta_time * 60  # Smooth 60 FPS motion
 
-                    # Keep angle in 0-360 range
-                    angle = angle % (2 * math.pi)
+                    angle += angle_increment
+                    angle = angle % (2 * math.pi)  # Keep angle in 0-360 range
+                    last_update = current_time
 
                     # Calculate position on circle
                     x = scaled_center_x + scaled_radius * math.cos(angle)
                     y = scaled_center_y + scaled_radius * math.sin(angle)
 
-                    # Move mouse to new position smoothly
-                    if self.config.get('MOUSE_360_SMOOTH_MOVEMENT', True):
+                    # Move mouse to new position with enhanced smooth movement
+                    if self.config.get('AUTO_MOUSE_SMOOTH_MOVEMENT', True):
                         fast_mouse.move_to(int(x), int(y))
                     else:
                         self.mouse_controller.position = (int(x), int(y))
 
-                    # Very short delay for smooth continuous motion
-                    # Make it faster by using smaller delay
-                    delay = max(0.01, self.config.get('MOUSE_360_DELAY', 0.05) / rotation_speed)
-                    time.sleep(delay)
+                    # Optimized delay for smoother motion (aiming for ~60 FPS)
+                    target_frame_time = 1.0 / 60.0
+                    actual_frame_time = current_time - last_update
+                    sleep_time = max(0.005, target_frame_time - actual_frame_time)
+                    time.sleep(sleep_time)
 
                 except Exception as e:
-                    print(f"[!] Error in mouse 360 movement: {e}")
+                    print(f"[!] Error in enhanced mouse 360 movement: {e}")
                     time.sleep(0.01)
             else:
                 # CPU-optimized sleep when not active
-                sleep_interval = 0.1 if self.config.get('MOUSE_360_CPU_OPTIMIZED', True) else 0.03
+                sleep_interval = 0.1 if self.config.get('AUTO_MOUSE_CPU_OPTIMIZED', True) else 0.03
                 time.sleep(sleep_interval)
+                last_update = current_time
         
     def worker_auto_offer(self):
         """Auto Offer toggle with ALT+0 hotkey - TOGGLE MODE"""
@@ -326,4 +344,4 @@ class WorkerManager:
         threading.Thread(target=self.worker_auto_move2, daemon=True).start()    # A + D
         threading.Thread(target=self.worker_auto_unpack, daemon=True).start()   # NEW
         threading.Thread(target=self.worker_auto_offer, daemon=True).start()   # NEW
-        threading.Thread(target=self.worker_mouse_360, daemon=True).start()     # 360 mouse
+        threading.Thread(target=self.worker_auto_mouse, daemon=True).start()     # 360 mouse
