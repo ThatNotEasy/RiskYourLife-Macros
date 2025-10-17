@@ -2,12 +2,14 @@ from modules.banners import clear_and_print
 from modules.run_as_admin import ensure_admin
 from modules.hotkeys import *
 from modules.workers import WorkerManager
-from modules.actions import mouse_left_up, send_key_scancode
-from modules.clients import Colors, print_client_info, kill_target_processes, koneksyen
+from modules.actions import mouse_left_up, send_key_scancode, tap_key_scancode
+from modules.clients import Colors, kill_target_processes, koneksyen
 from modules.config import parse_hotkey_string, save_config, load_config
 from modules.antidebug import AntiDebug
 from modules.inputs import *
+from modules.updates import update_manager
 import time, signal
+import threading
 import colorama
 import ctypes
 
@@ -92,15 +94,16 @@ class GameMacro:
             HK_TOGGLE_AUTO_UNPACK: self.toggle_auto_unpack,
             HK_TOGGLE_AUTO_MOUSE: self.toggle_auto_mouse,
             HK_AUTO_OFFER: self.toggle_auto_offer,
+            HK_CHECK_UPDATES: self.check_updates,
             HK_EXIT: self.exit_app,
-            HK_CONFIG_CHANGE: self.change_config
+            HK_CONFIG_CHANGE: self.change_config,
         }
         
     def build_status_line(self):
         display_name = 'RiskYourLife'
         game_running = self.worker_manager.is_game_running()
         master_status = status_indicator(self.worker_manager.master_on)
-        game_status = f"{Colors.BRIGHT_GREEN}● [READY]{Colors.RESET}" if game_running else f"{Colors.BRIGHT_RED}● [GAME NOT FOUND]{Colors.RESET}"
+        game_status = f"{Colors.BRIGHT_GREEN}\n● [READY]{Colors.RESET}" if game_running else f"{Colors.BRIGHT_RED}\n● [GAME NOT FOUND]{Colors.RESET}"
 
         feature_status = {
             "Auto Picker": self.worker_manager.loop_e_on,
@@ -115,7 +118,11 @@ class GameMacro:
             "Auto Offer": self.worker_manager.auto_offer_on
         }
 
-        header = f"\n{Colors.BRIGHT_CYAN} Status: {master_status} {Colors.BRIGHT_WHITE}Master{Colors.RESET}  {game_status} {Colors.BRIGHT_WHITE}{display_name}{Colors.RESET}\n"
+        # Display version without checking for updates
+        current_version = update_manager.get_current_version()
+        version_display = f"{Colors.BRIGHT_WHITE}v{current_version}{Colors.RESET}"
+
+        header = f"\n{game_status} {Colors.BRIGHT_WHITE}{display_name} {version_display}{Colors.RESET}\n"
 
         table_header = (
             f"{Colors.BRIGHT_MAGENTA}╔══════════════╦══════════════════════════════════════════╦══════════════╗{Colors.RESET}\n"
@@ -124,7 +131,7 @@ class GameMacro:
         )
 
         hotkeys = [
-            (self.config['RiskYourLife-Macros']['START_SCRIPT'], "On/Off Macros Mode", "Master"),
+            (self.config['RiskYourLife-Macros']['START_SCRIPT'], "On/Off Macros MasterKey Mode", "Master"),
             (self.config['RiskYourLife-Macros']['AUTO_PICKER'], "Auto Picker", "Auto Picker"),
             (self.config['RiskYourLife-Macros']['AUTO_HITTING'], "Auto Hitting", "Auto Hit"),
             (self.config['RiskYourLife-Macros']['AUTO_SKILL_ATTACK'], "Auto Skill", "Auto Skill"),
@@ -136,7 +143,9 @@ class GameMacro:
             (self.config['RiskYourLife-Macros']['AUTO_OFFER'], "Auto Offer", "Auto Offer"),
             (self.config['RiskYourLife-Macros']['AUTO_MOUSE'], "Auto Mouse", "Auto Mouse"),
             ("ALT+C", "Change HotKeys", ""),
-            (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program", "")
+            ("ALT+U", "Check Updates", ""),
+            (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program", ""),
+            ("", "", "")
         ]
 
         table_rows = []
@@ -184,7 +193,8 @@ class GameMacro:
                 ('9', 'Auto Unpack', self.config['RiskYourLife-Macros']['AUTO_UNPACK']),
                 ('10', 'Auto Offer', self.config['RiskYourLife-Macros']['AUTO_OFFER']),
                 ('11', 'Auto Mouse', self.config['RiskYourLife-Macros']['AUTO_MOUSE']),
-                ('12', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
+                ('12', 'Check Updates', 'ALT+U'),
+                ('13', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
                 ('0', 'Cancel', '')
             ]
 
@@ -197,7 +207,7 @@ class GameMacro:
             print()
 
             try:
-                choice = input(f"{Colors.BRIGHT_YELLOW}Enter choice (0-12): {Colors.RESET}").strip()
+                choice = input(f"{Colors.BRIGHT_YELLOW}Enter choice (0-13): {Colors.RESET}").strip()
                 if choice == '0':
                     print()
                     return  # Exit the configuration menu
@@ -214,7 +224,8 @@ class GameMacro:
                     '9': 'AUTO_UNPACK',
                     '10': 'AUTO_OFFER',
                     '11': 'AUTO_MOUSE',
-                    '12': 'QUIT_SCRIPT'
+                    '12': 'CHECK_UPDATES',
+                    '13': 'QUIT_SCRIPT'
                 }
 
                 if choice in option_mapping:
@@ -228,21 +239,26 @@ class GameMacro:
                     new_value = input(f"{Colors.BRIGHT_YELLOW}Enter new hotkey: {Colors.RESET}").strip().upper()
 
                     if new_value:
-                        try:
-                            parse_hotkey_string(new_value)
-                            self.config['RiskYourLife-Macros'][config_key] = new_value
-                            save_config(self.config)
-                            print(f"\n{Colors.BRIGHT_GREEN}Hotkey updated successfully!{Colors.RESET}")
-                            print(f"{Colors.BRIGHT_YELLOW}Please restart the application for changes to take effect.{Colors.RESET}")
-
-                            continue_editing = input(f"\n{Colors.BRIGHT_YELLOW}Edit another hotkey? (y/n): {Colors.RESET}").strip().lower()
-                            if continue_editing not in ('y', 'yes'):
-                                return  # Exit the configuration menu
-
-                        except Exception as e:
-                            print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
-                            print(f"{Colors.BRIGHT_YELLOW}Please try again with a valid hotkey format.{Colors.RESET}")
+                        # Special handling for Check Updates (not in config file)
+                        if config_key == 'CHECK_UPDATES':
+                            print(f"\n{Colors.BRIGHT_CYAN}Check Updates uses ALT+U and cannot be changed.{Colors.RESET}")
                             input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
+                        else:
+                            try:
+                                parse_hotkey_string(new_value)
+                                self.config['RiskYourLife-Macros'][config_key] = new_value
+                                save_config(self.config)
+                                print(f"\n{Colors.BRIGHT_GREEN}Hotkey updated successfully!{Colors.RESET}")
+                                print(f"{Colors.BRIGHT_YELLOW}Please restart the application for changes to take effect.{Colors.RESET}")
+
+                                continue_editing = input(f"\n{Colors.BRIGHT_YELLOW}Edit another hotkey? (y/n): {Colors.RESET}").strip().lower()
+                                if continue_editing not in ('y', 'yes'):
+                                    return  # Exit the configuration menu
+
+                            except Exception as e:
+                                print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
+                                print(f"{Colors.BRIGHT_YELLOW}Please try again with a valid hotkey format.{Colors.RESET}")
+                                input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
                     else:
                         print(f"\n{Colors.BRIGHT_RED}No value entered, keeping current setting.{Colors.RESET}")
                         input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
@@ -255,97 +271,96 @@ class GameMacro:
                 input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
                 # Continue the loop to restart the config menu
 
-    def toggle_master(self):
-        self.worker_manager.master_on = not self.worker_manager.master_on
-        status = "ON" if self.worker_manager.master_on else "OFF"
-        color = Colors.BRIGHT_GREEN if self.worker_manager.master_on else Colors.BRIGHT_RED
-        # Ensure mouse button and spacebar are released when master is turned off
-        if not self.worker_manager.master_on:
-            mouse_left_up()
-            send_key_scancode(SC_SPACE, False)  # Release spacebar
-            self.worker_manager.mouse_held = False
+    def generic_toggle(self, flag_name, event_name, off_actions=None):
+        """Generic toggle method to eliminate duplicate code"""
+        # Toggle the boolean flag
+        current_state = getattr(self.worker_manager, flag_name)
+        new_state = not current_state
+        setattr(self.worker_manager, flag_name, new_state)
+
+        # Handle event setting/clearing
+        if event_name:
+            event = getattr(self.worker_manager, event_name)
+            if new_state:
+                event.set()
+            else:
+                event.clear()
+
+        # Execute any special off actions
+        if not new_state and off_actions:
+            for action in off_actions:
+                action()
+
         self.render_status()
+
+    def toggle_master(self):
+        # Special case with additional off actions
+        off_actions = [
+            lambda: mouse_left_up(),
+            lambda: send_key_scancode(SC_SPACE, False),  # Release spacebar
+            lambda: setattr(self.worker_manager, 'mouse_held', False)
+        ]
+        self.generic_toggle('master_on', None, off_actions)
 
     def toggle_e(self):
-        self.worker_manager.loop_e_on = not self.worker_manager.loop_e_on
-        if self.worker_manager.loop_e_on:
-            self.worker_manager.e_event.set()
-        else:
-            self.worker_manager.e_event.clear()
-        self.render_status()
+        self.generic_toggle('loop_e_on', 'e_event')
 
     def toggle_click(self):
-        self.worker_manager.loop_click_on = not self.worker_manager.loop_click_on
-        if self.worker_manager.loop_click_on:
-            self.worker_manager.click_event.set()
-        else:
-            self.worker_manager.click_event.clear()
+        def click_off_action():
             mouse_left_up()
-        self.render_status()
+        self.generic_toggle('loop_click_on', 'click_event', [click_off_action])
 
     def toggle_skill_attack(self):  # NEW
-        self.worker_manager.loop_skill_attack_on = not self.worker_manager.loop_skill_attack_on
-        if self.worker_manager.loop_skill_attack_on:
-            self.worker_manager.skill_attack_event.set()
-        else:
-            self.worker_manager.skill_attack_event.clear()
-        self.render_status()
+        self.generic_toggle('loop_skill_attack_on', 'skill_attack_event')
 
     def toggle_combined_action(self):
-        self.worker_manager.loop_combined_action_on = not self.worker_manager.loop_combined_action_on
-        if self.worker_manager.loop_combined_action_on:
-            self.worker_manager.combined_action_event.set()
-        else:
-            self.worker_manager.combined_action_event.clear()
-        self.render_status()
+        self.generic_toggle('loop_combined_action_on', 'combined_action_event')
 
     def toggle_auto_move(self):  # W + S (front/back)
-        self.worker_manager.loop_auto_move_on = not self.worker_manager.loop_auto_move_on
-        if self.worker_manager.loop_auto_move_on:
-            self.worker_manager.auto_move_event.set()
-        else:
-            self.worker_manager.auto_move_event.clear()
-        self.render_status()
+        self.generic_toggle('loop_auto_move_on', 'auto_move_event')
 
     def toggle_auto_move2(self):  # A + D (left/right)
-        self.worker_manager.loop_auto_move2_on = not self.worker_manager.loop_auto_move2_on
-        if self.worker_manager.loop_auto_move2_on:
-            self.worker_manager.auto_move2_event.set()
-        else:
-            self.worker_manager.auto_move2_event.clear()
-        self.render_status()
+        self.generic_toggle('loop_auto_move2_on', 'auto_move2_event')
 
     def toggle_resser(self):
-        self.worker_manager.loop_resser_on = not self.worker_manager.loop_resser_on
-        if self.worker_manager.loop_resser_on:
-            self.worker_manager.resser_event.set()
+        # Check if we're turning ON the resser
+        if not self.worker_manager.loop_resser_on:
+            # Turn on the resser first
+            self.generic_toggle('loop_resser_on', 'resser_event')
+
+            # Give the worker thread a moment to initialize
+            time.sleep(0.01)
+
+            # Then press F1-F10 three times each very quickly
+            f_keys = [0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43, 0x44]  # F1-F10 scan codes
+
+            for _ in range(3):  # Three times
+                for sc in f_keys:
+                    tap_key_scancode(sc, hold_ms=0.001)  # Very fast press
+                    time.sleep(0.0001)  # Minimal delay between keys
+                time.sleep(0.001)  # Small delay between cycles
         else:
-            self.worker_manager.resser_event.clear()
-        self.render_status()
+            # Just turn off the resser normally (no F-key pressing)
+            self.generic_toggle('loop_resser_on', 'resser_event')
 
     def toggle_auto_unpack(self):
-        self.worker_manager.loop_auto_unpack_on = not self.worker_manager.loop_auto_unpack_on
-        if self.worker_manager.loop_auto_unpack_on:
-            self.worker_manager.auto_unpack_event.set()
-        else:
-            self.worker_manager.auto_unpack_event.clear()
-        self.render_status()
+        self.generic_toggle('loop_auto_unpack_on', 'auto_unpack_event')
 
     def toggle_auto_mouse(self):
-        self.worker_manager.loop_auto_mouse_on = not self.worker_manager.loop_auto_mouse_on
-        if self.worker_manager.loop_auto_mouse_on:
-            self.worker_manager.auto_mouse_event.set()
-        else:
-            self.worker_manager.auto_mouse_event.clear()
-        self.render_status()
+        self.generic_toggle('loop_auto_mouse_on', 'auto_mouse_event')
 
     def toggle_auto_offer(self):
-        self.worker_manager.auto_offer_on = not self.worker_manager.auto_offer_on
-        if self.worker_manager.auto_offer_on:
-            self.worker_manager.auto_offer_event.set()
+        self.generic_toggle('auto_offer_on', 'auto_offer_event')
+
+    def check_updates(self):
+        """Check for updates manually"""
+        print(f"\n{Colors.BRIGHT_YELLOW}[INFO] Checking for updates...{Colors.RESET}")
+        update_info = update_manager.check_for_updates()
+        if update_info:
+            print(f"{Colors.BRIGHT_GREEN}[UPDATE] New version available: {update_info['version']}{Colors.RESET}")
+            print(f"{Colors.BRIGHT_CYAN}Release page: {update_info['release_url']}{Colors.RESET}")
         else:
-            self.worker_manager.auto_offer_event.clear()
-        self.render_status()
+            print(f"{Colors.BRIGHT_YELLOW}[INFO] You have the latest version.{Colors.RESET}")
 
     def exit_app(self):
         """Exit the application gracefully"""
@@ -366,18 +381,25 @@ class GameMacro:
 
         import sys
         sys.exit(0)
-    
+
     def run(self):
         ensure_admin()
+
         clear_and_print()  # Clear screen and show banner
-        print_client_info()
-        
-        self.render_status()
+
         self.render_status()
         print()
-        kill_target_processes()
 
-        print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Please start the game manually. Macros are ready to use.{Colors.RESET}")
+        # Start koneksyen in a separate thread to avoid blocking other features
+        connection_thread = threading.Thread(target=koneksyen, daemon=True)
+        connection_thread.start()
+        kill_target_processes()
+    
+
+        print(f"\n{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Please start the game manually. Macros are ready to use.{Colors.RESET}")
+        
+
+        # Continue with normal operation (interface already shown)
         self.worker_manager.start_workers()
         self.anti_debug.start()  # Start anti-debug protection
         time.sleep(0.5)  # Brief delay for anti-debug initialization
@@ -402,6 +424,6 @@ if __name__ == "__main__":
         signal.signal(signal.SIGTERM, signal_handler)
 
     app = GameMacro()
-    koneksyen()
     app.run()
+    
     

@@ -31,6 +31,22 @@
 - **Risk Your Life (RYL)** – Active game client
 - **Windows** – Script uses Windows-specific libraries
 
+### Building from Source:
+1. **Install Python dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Build executable (Windows):**
+   ```bash
+   bash build.sh
+   ```
+
+3. **Alternative build options:**
+   - The build script automatically downloads MinGW64 compiler if needed
+   - For faster builds, install Visual Studio Build Tools
+   - Built executable will be named `RiskYourLife-Macros.exe`
+
 ## 🎮 Hotkeys & Controls
 
 | Hotkey | Feature | Description |

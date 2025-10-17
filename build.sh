@@ -20,7 +20,7 @@ PRODUCT_VER="2.0"   # make product version 4-part too
 COPYRIGHT="(c) 2025 Pari Malam"
 
 NUITKA_FLAGS=(
-  --onefile --follow-imports --enable-plugin=pyqt5 --lto=yes --msvc=latest
+  --onefile --follow-imports --lto=yes --mingw64
   --windows-icon-from-ico="$ICON"
   --windows-product-name="$PRODUCT_NAME"
   --windows-file-description="$FILE_DESC"
@@ -29,7 +29,8 @@ NUITKA_FLAGS=(
   --windows-product-version="$PRODUCT_VER"
   --copyright="$COPYRIGHT"
   --include-module=PIL.ImageQt \
-  --include-module=psutil
+  --include-module=psutil \
+  --include-module=PyQt5
   --output-filename="$OUT_NAME"
 )
 
@@ -54,14 +55,13 @@ if ! $PY_CMD -m nuitka --version >/dev/null 2>&1; then
 fi
 ok "Nuitka is installed."
 
-# On Windows (Git Bash/MSYS), check if MSVC environment is ready
+# On Windows (Git Bash/MSYS), check if MinGW64 environment is ready
 UNAME="$(uname -s || true)"
 if [[ "$UNAME" == MINGW* || "$UNAME" == MSYS* || "$UNAME" == CYGWIN* || "$UNAME" == "Windows_NT" ]]; then
-  if ! command -v cl.exe >/dev/null 2>&1; then
-    warn "MSVC (cl.exe) is not on PATH. If this fails, open 'x64 Native Tools Command Prompt for VS' then run this script."
-    warn "Alternatively, install Build Tools + Windows SDK, or switch toolchain (e.g. --clang / --mingw64)."
+  if ! command -v gcc >/dev/null 2>&1; then
+    info "MinGW64 (gcc) is not on PATH. Nuitka will download MinGW64 automatically."
   else
-    ok "MSVC toolchain detected (cl.exe found)."
+    ok "MinGW64 toolchain detected (gcc found)."
   fi
 fi
 
@@ -110,22 +110,22 @@ if [[ -f "$OUT_NAME" ]]; then
   # Use 7z command
   if command -v 7z >/dev/null 2>&1; then
     # Build list of files to include
-    FILES_TO_ARCHIVE=("$OUT_NAME")
+    FILES_TO_ARCHIVE="$OUT_NAME"
 
     # Check for config files and add them if they exist
     ARCHIVE_CONTENTS="$OUT_NAME"
     if [[ -f "config.ini" ]]; then
-      FILES_TO_ARCHIVE+=("config.ini")
+      FILES_TO_ARCHIVE="$FILES_TO_ARCHIVE config.ini"
       ARCHIVE_CONTENTS="$ARCHIVE_CONTENTS and config.ini"
     fi
 
     if [[ -f "position.ini" ]]; then
-      FILES_TO_ARCHIVE+=("position.ini")
+      FILES_TO_ARCHIVE="$FILES_TO_ARCHIVE position.ini"
       ARCHIVE_CONTENTS="$ARCHIVE_CONTENTS and position.ini"
     fi
 
     # Create archive with all files
-    7z a "$ARCHIVE_NAME" "${FILES_TO_ARCHIVE[@]}"
+    7z a "$ARCHIVE_NAME" $FILES_TO_ARCHIVE
 
     if [[ -f "$ARCHIVE_NAME" ]]; then
       ok "Archive created → ./$ARCHIVE_NAME (includes $ARCHIVE_CONTENTS)"

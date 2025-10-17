@@ -75,10 +75,11 @@ class WorkerManager:
         try:
             for proc in psutil.process_iter(['name']):
                 name = proc.info['name'].lower()
-                if 'minia.bin' in name or 'client.exe' in name:
+                if 'minia.bin' in name or 'client.exe' in name or 'minia.exe' in name:
                     return True
             return False
-        except:
+        except Exception as e:
+            print(f"[!] Error checking game process: {e}")
             return False
         
     def worker_combined_action(self):
@@ -187,21 +188,28 @@ class WorkerManager:
         while True:
             if self.master_on and self.resser_event.is_set() and self.is_game_running():
                 for sc in f_keys:
-                    tap_key_scancode(sc, hold_ms=0.5)  # Ultra fast press
-                    time.sleep(0.0005)  # Minimal delay between F keys
+                    tap_key_scancode(sc, hold_ms=0.001)  # Very fast press (1ms)
+                    time.sleep(0.0001)  # Minimal delay between F keys
                     if not (self.master_on and self.resser_event.is_set() and self.is_game_running()):
                         break
             else:
                 time.sleep(0.02)
 
     def worker_auto_unpack(self):
-        """Ultra fast right-clicking for auto unpack gold"""
+        """Simple auto right-clicking for auto unpack gold - normal clicking speed"""
         while True:
-            if self.master_on and self.auto_unpack_event.is_set() and self.is_game_running():
-                mouse_right_click_once(self.config['CLICK_DOWN_MS'])
-                time.sleep(0.0005)  # Ultra fast clicking
-            else:
-                time.sleep(0.02)
+            try:
+                if self.master_on and self.auto_unpack_event.is_set() and self.is_game_running():
+                    # Simple, normal right-click - like a human would do
+                    mouse_right_down()
+                    time.sleep(0.05)  # Normal click duration
+                    mouse_right_up()
+                    time.sleep(0.1)   # Normal delay between clicks (100ms)
+                else:
+                    time.sleep(0.05)
+            except Exception as e:
+                print(f"[!] Error in auto unpack worker: {e}")
+                time.sleep(0.2)  # Brief pause before retrying
 
     def worker_auto_mouse(self):
         """Enhanced auto mouse movement with improved continuous circular motion"""

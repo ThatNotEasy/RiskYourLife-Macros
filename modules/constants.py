@@ -58,6 +58,7 @@ VK_OEM_6 = 0xDD         # ]} key
 VK_OEM_7 = 0xDE         # '" key
 VK_OEM_COMMA = 0xBC     # ,< key
 VK_OEM_PERIOD = 0xBE    # .> key
+VK_U = 0x55             # U key
 
 # Function keys
 VK_F3 = 0x72
@@ -96,6 +97,7 @@ HK_AUTO_OFFER = 1013            # Auto Offer with ALT+0
 HK_TOGGLE_AUTO_MOUSE = 1014
 HK_CONFIG_CHANGE = 1007
 HK_EXIT = 1004
+HK_CHECK_UPDATES = 1015         # Check for updates
 
 # Scan codes
 SC_SPACE = 0x39  # Jump (Spacebar)

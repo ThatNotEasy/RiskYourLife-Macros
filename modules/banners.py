@@ -1,6 +1,7 @@
 import os, time, sys, math
 from sys import stdout
 from colorama import Fore, Style
+from modules.clients import print_client_info
 
 # =========================================================================================================== #
 
@@ -31,3 +32,4 @@ def banners():
 def clear_and_print():
     clear_screen()
     banners()
+    print_client_info()

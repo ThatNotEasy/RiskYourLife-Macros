@@ -46,6 +46,9 @@ def register_hotkeys():
 
     # Register ALT+9 for Auto Offer (not in config file)
     RegisterHotKey(None, HK_AUTO_OFFER, MOD_ALT, 0x39)  # ALT+9
+
+    # Register ALT+U for Check Updates (not in config file)
+    RegisterHotKey(None, HK_CHECK_UPDATES, MOD_ALT, 0x55)  # ALT+U
             
 def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_MASTER)
@@ -59,6 +62,7 @@ def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_AUTO_MOUSE)  # 360 mouse
     UnregisterHotKey(None, HK_TOGGLE_COMBINED_ACTION)
     UnregisterHotKey(None, HK_AUTO_OFFER)  # Auto Offer
+    UnregisterHotKey(None, HK_CHECK_UPDATES)  # Check Updates
     UnregisterHotKey(None, HK_CONFIG_CHANGE)
     UnregisterHotKey(None, HK_EXIT)
 
