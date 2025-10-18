@@ -49,6 +49,9 @@ def register_hotkeys():
 
     # Register ALT+U for Check Updates (not in config file)
     RegisterHotKey(None, HK_CHECK_UPDATES, MOD_ALT, 0x55)  # ALT+U
+
+    # Register ALT+W for Hold W (not in config file)
+    RegisterHotKey(None, HK_HOLD_W, MOD_ALT, 0x57)  # ALT+W
             
 def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_MASTER)
@@ -63,6 +66,7 @@ def unregister_hotkeys():
     UnregisterHotKey(None, HK_TOGGLE_COMBINED_ACTION)
     UnregisterHotKey(None, HK_AUTO_OFFER)  # Auto Offer
     UnregisterHotKey(None, HK_CHECK_UPDATES)  # Check Updates
+    UnregisterHotKey(None, HK_HOLD_W)         # Hold W key
     UnregisterHotKey(None, HK_CONFIG_CHANGE)
     UnregisterHotKey(None, HK_EXIT)
 

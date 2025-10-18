@@ -98,6 +98,7 @@ HK_TOGGLE_AUTO_MOUSE = 1014
 HK_CONFIG_CHANGE = 1007
 HK_EXIT = 1004
 HK_CHECK_UPDATES = 1015         # Check for updates
+HK_HOLD_W = 1016                # Hold W key (ALT+W)
 
 # Scan codes
 SC_SPACE = 0x39  # Jump (Spacebar)

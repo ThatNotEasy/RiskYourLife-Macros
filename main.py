@@ -16,7 +16,7 @@ import ctypes
 colorama.init()
 
 SendInput = ctypes.windll.user32.SendInput
-
+w
 try:
     from modules.meowing import MEOWING
     MEOWING_AVAILABLE = True
@@ -94,6 +94,7 @@ class GameMacro:
             HK_TOGGLE_AUTO_UNPACK: self.toggle_auto_unpack,
             HK_TOGGLE_AUTO_MOUSE: self.toggle_auto_mouse,
             HK_AUTO_OFFER: self.toggle_auto_offer,
+            HK_HOLD_W: self.toggle_hold_w,
             HK_CHECK_UPDATES: self.check_updates,
             HK_EXIT: self.exit_app,
             HK_CONFIG_CHANGE: self.change_config,
@@ -115,7 +116,8 @@ class GameMacro:
             "Auto Resser": self.worker_manager.loop_resser_on,
             "Auto Unpack": self.worker_manager.loop_auto_unpack_on,
             "Auto Mouse": self.worker_manager.loop_auto_mouse_on,
-            "Auto Offer": self.worker_manager.auto_offer_on
+            "Auto Offer": self.worker_manager.auto_offer_on,
+            "Hold W": self.worker_manager.loop_hold_w_on
         }
 
         # Display version without checking for updates
@@ -142,6 +144,7 @@ class GameMacro:
             (self.config['RiskYourLife-Macros']['AUTO_UNPACK'], "Auto Unpack Gold", "Auto Unpack"),
             (self.config['RiskYourLife-Macros']['AUTO_OFFER'], "Auto Offer", "Auto Offer"),
             (self.config['RiskYourLife-Macros']['AUTO_MOUSE'], "Auto Mouse", "Auto Mouse"),
+            ("ALT+W", "Hold W Key", "Hold W"),
             ("ALT+C", "Change HotKeys", ""),
             ("ALT+U", "Check Updates", ""),
             (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program", ""),
@@ -297,8 +300,7 @@ class GameMacro:
         # Special case with additional off actions
         off_actions = [
             lambda: mouse_left_up(),
-            lambda: send_key_scancode(SC_SPACE, False),  # Release spacebar
-            lambda: setattr(self.worker_manager, 'mouse_held', False)
+            lambda: send_key_scancode(SC_SPACE, False)  # Release spacebar
         ]
         self.generic_toggle('master_on', None, off_actions)
 
@@ -351,6 +353,9 @@ class GameMacro:
 
     def toggle_auto_offer(self):
         self.generic_toggle('auto_offer_on', 'auto_offer_event')
+
+    def toggle_hold_w(self):
+        self.generic_toggle('loop_hold_w_on', 'hold_w_event')
 
     def check_updates(self):
         """Check for updates manually"""

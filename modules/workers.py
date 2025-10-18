@@ -57,7 +57,7 @@ class WorkerManager:
         self.loop_auto_move2_on = False    # A + D (left/right)
         self.loop_auto_unpack_on = False   # NEW
         self.loop_auto_mouse_on = False     # 360 mouse movement
-        self.mouse_held = False  # Track if mouse left button is held down
+        self.loop_hold_w_on = False         # Hold W key
         self.mouse_controller = Controller()  # Regular mouse controller
         self.e_event = threading.Event()
         self.click_event = threading.Event()
@@ -69,13 +69,14 @@ class WorkerManager:
         self.auto_unpack_event = threading.Event()   # NEW
         self.auto_offer_event = threading.Event()    # Auto Offer
         self.auto_mouse_event = threading.Event()     # 360 mouse
+        self.hold_w_event = threading.Event()         # Hold W key
 
     def is_game_running(self):
         """Check if the game process (MiniA.bin or Client.exe) is running"""
         try:
             for proc in psutil.process_iter(['name']):
                 name = proc.info['name'].lower()
-                if 'minia.bin' in name or 'client.exe' in name or 'minia.exe' in name:
+                if 'minia.bin' in name or 'client.exe' in name or 'minia.exe' in name or 'client.bin' in name:
                     return True
             return False
         except Exception as e:
@@ -167,19 +168,15 @@ class WorkerManager:
                 time.sleep(0.02)
 
     def worker_click(self):
-        """Hold left mouse button continuously for auto hit"""
+        """Rapid left mouse button clicking for auto hit"""
         while True:
             if self.master_on and self.click_event.is_set() and self.is_game_running():
-                # Hold left mouse button down
-                if not self.mouse_held:
-                    mouse_left_down()
-                    self.mouse_held = True
-                time.sleep(0.02)  # Small delay to prevent excessive CPU usage
+                # Perform rapid left mouse clicks
+                mouse_left_down()
+                time.sleep(0.03)  # Click duration - slightly longer for better detection
+                mouse_left_up()
+                time.sleep(0.02)   # Delay between clicks for rapid but controlled clicking
             else:
-                # Release left mouse button when disabled
-                if self.mouse_held:
-                    mouse_left_up()
-                    self.mouse_held = False
                 time.sleep(0.02)
                 
     def worker_resser(self):
@@ -342,6 +339,18 @@ class WorkerManager:
             else:
                 time.sleep(0.03)
 
+    def worker_hold_w(self):
+        """Hold W key continuously for forward movement"""
+        while True:
+            if self.master_on and self.hold_w_event.is_set() and self.is_game_running():
+                # Hold W key down
+                send_key_scancode(SC_W, True)
+                time.sleep(0.03)  # Keep checking
+            else:
+                # Release W key when disabled
+                send_key_scancode(SC_W, False)
+                time.sleep(0.03)
+
     def start_workers(self):
         threading.Thread(target=self.worker_e, daemon=True).start()
         threading.Thread(target=self.worker_click, daemon=True).start()
@@ -353,3 +362,4 @@ class WorkerManager:
         threading.Thread(target=self.worker_auto_unpack, daemon=True).start()   # NEW
         threading.Thread(target=self.worker_auto_offer, daemon=True).start()   # NEW
         threading.Thread(target=self.worker_auto_mouse, daemon=True).start()     # 360 mouse
+        threading.Thread(target=self.worker_hold_w, daemon=True).start()        # Hold W key
