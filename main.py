@@ -16,7 +16,7 @@ import ctypes
 colorama.init()
 
 SendInput = ctypes.windll.user32.SendInput
-w
+
 try:
     from modules.meowing import MEOWING
     MEOWING_AVAILABLE = True
@@ -134,6 +134,7 @@ class GameMacro:
 
         hotkeys = [
             (self.config['RiskYourLife-Macros']['START_SCRIPT'], "On/Off Macros MasterKey Mode", "Master"),
+            ("", "", ""),  # Separator after HOME hotkey
             (self.config['RiskYourLife-Macros']['AUTO_PICKER'], "Auto Picker", "Auto Picker"),
             (self.config['RiskYourLife-Macros']['AUTO_HITTING'], "Auto Hitting", "Auto Hit"),
             (self.config['RiskYourLife-Macros']['AUTO_SKILL_ATTACK'], "Auto Skill", "Auto Skill"),
@@ -157,9 +158,13 @@ class GameMacro:
                 status_display = status_indicator(self.worker_manager.master_on)
             elif status_key and status_key in feature_status:
                 status_display = status_indicator(feature_status[status_key])
+            elif not key and not action and not status_key:
+                # This is a separator row - add the separator line
+                table_rows.append(f"{Colors.BRIGHT_MAGENTA}╠══════════════╬══════════════════════════════════════════╬══════════════╣{Colors.RESET}")
+                continue
             else:
                 status_display = " " * 9  # Empty status for non-feature rows
-            
+
             table_rows.append(
                 f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{key:<12} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{action:<40} {Colors.BRIGHT_MAGENTA}║ {status_display:<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}"
             )
@@ -359,13 +364,18 @@ class GameMacro:
 
     def check_updates(self):
         """Check for updates manually"""
-        print(f"\n{Colors.BRIGHT_YELLOW}[INFO] Checking for updates...{Colors.RESET}")
+        print(f"\n{Colors.BRIGHT_YELLOW} [INFO] Checking for updates...{Colors.RESET}")
         update_info = update_manager.check_for_updates()
         if update_info:
             print(f"{Colors.BRIGHT_GREEN}[UPDATE] New version available: {update_info['version']}{Colors.RESET}")
             print(f"{Colors.BRIGHT_CYAN}Release page: {update_info['release_url']}{Colors.RESET}")
         else:
             print(f"{Colors.BRIGHT_YELLOW}[INFO] You have the latest version.{Colors.RESET}")
+
+        # Clear screen and show updated status after checking updates
+        time.sleep(1)  # Brief pause to let user read the update message
+        clear_and_print()
+        self.render_status()
 
     def exit_app(self):
         """Exit the application gracefully"""

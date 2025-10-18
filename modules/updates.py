@@ -58,9 +58,6 @@ class UpdateManager:
                     "release_url": release_data.get("html_url", "")
                 }
             else:
-                print(f"{Colors.BRIGHT_YELLOW}[INFO] {Colors.BRIGHT_WHITE}You have the latest version: {current_version}{Colors.RESET}")
-                time.sleep(3)
-                
                 return None
 
         except requests.exceptions.RequestException as e:

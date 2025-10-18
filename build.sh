@@ -155,3 +155,26 @@ if [[ -f "$OUT_NAME" ]]; then
 else
   warn "EXE not found as '$OUT_NAME'. Check for errors above or in *.dist/ folders."
 fi
+
+# --- GitHub CLI upload ---
+REPO="ThatNotEasy/RiskYourLife-Macros"          # e.g. PariMalam/RiskYourLife
+TAG="V${FILE_VER}"
+RELEASE_TITLE="${PRODUCT_NAME} ${TAG}"
+RELEASE_NOTES="Release ${TAG} — automated upload from build script."
+
+if command -v gh >/dev/null 2>&1; then
+  info "Creating/updating GitHub release $TAG and uploading $ARCHIVE_NAME with gh"
+  # create release (will fail if release exists) — use --prerelease if desired
+  gh release create "$TAG" "./$ARCHIVE_NAME" \
+    --repo "$REPO" \
+    --title "$RELEASE_TITLE" \
+    --notes "$RELEASE_NOTES" \
+    --draft=false || {
+      # if release exists fallback to upload asset to existing release
+      info "Release creation failed (may already exist). Uploading to existing release..."
+      gh release upload "$TAG" "./$ARCHIVE_NAME" --repo "$REPO" --clobber
+    }
+  ok "Uploaded to GitHub Releases via gh."
+else
+  warn "gh CLI not found. Install GitHub CLI or use the curl method below."
+fi
