@@ -1,0 +1,88 @@
+name: Publish Release (Windows build)
+
+on:
+  push:
+    tags:
+      - 'v*'        # run for tags like v2.1, v1.0.0, etc.
+
+jobs:
+  build-and-release-windows:
+    runs-on: windows-latest
+    env:
+      # Use the automatic token provided by GitHub Actions
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # optional: install 7z (choco) or other prerequisites if your build needs it
+      - name: Install 7zip (optional, used by build.sh)
+        if: always()
+        run: |
+          choco install 7zip -y
+        shell: powershell
+
+      # Run build.sh using bash (Git Bash available on windows-latest)
+      - name: Run build script (Git Bash)
+        run: |
+          # run via bash so your build.sh (bash script) behaves as on developer machine
+          bash -lc "./build.sh"
+        shell: bash
+
+      - name: Show files (debug)
+        run: |
+          echo "Listing workspace files (bash):"
+          ls -la
+        shell: bash
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: Release ${{ github.ref_name }} - automated upload from workflow
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute version (strip leading v) and upload artifact (bash)
+        env:
+          UPLOAD_URL: ${{ steps.create_release.outputs.upload_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # On Windows runner using bash: GITHUB_REF is available and is like refs/tags/v2.1
+          REF_NAME="${GITHUB_REF##*/}"       # e.g. v2.1
+          VERSION="${REF_NAME#v}"           # strip leading v -> 2.1
+          echo "REF_NAME='$REF_NAME' VERSION='$VERSION'"
+
+          # Build the expected artifact filename (must match build.sh output)
+          ASSET="./RiskYourLife-Macros_V${VERSION}.zip"
+          echo "Expecting asset at: $ASSET"
+
+          if [[ ! -f "$ASSET" ]]; then
+            echo "ERROR: Asset not found: $ASSET"
+            echo "Listing files to help debug:"
+            ls -la
+            exit 1
+          fi
+
+          # Use the upload_url from the release (append ?name=... for upload)
+          UPLOAD_ENDPOINT="${UPLOAD_URL}?name=$(basename "$ASSET")"
+          echo "Using upload endpoint: $UPLOAD_ENDPOINT"
+
+          # Upload the asset to the release using curl (curl available on windows-latest)
+          curl --fail --progress-bar -X POST "$UPLOAD_ENDPOINT" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Content-Type: application/zip" \
+            --data-binary @"$ASSET"
+
+          echo "Upload finished."
+        shell: bash
