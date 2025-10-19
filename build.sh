@@ -159,7 +159,7 @@ fi
 # --- GitHub CLI upload ---
 REPO="ThatNotEasy/RiskYourLife-Macros"          # e.g. PariMalam/RiskYourLife
 TAG="V${FILE_VER}"
-RELEASE_TITLE="${PRODUCT_NAME} ${TAG}"
+RELEASE_TITLE="${TAG}"
 RELEASE_NOTES="Release ${TAG} — automated upload from build script."
 
 if command -v gh >/dev/null 2>&1; then
