@@ -1,12 +1,74 @@
-main.build
-main.dist
-main.onefile-build
-build
-venv
-*.xml
+# ==========================
+# Python Cache / Compiled Files
+# ==========================
+__pycache__/
+*.py[cod]
+*$py.class
+.lh/
+
+# ==========================
+# Nuitka / Build Artifacts
+# ==========================
+*.build/
+*.dist/
+*.onefile-build/
+nuitka-crash-report.xml
 *.exe
+*.bin
+*.spec
+
+# ==========================
+# Archives / Output
+# ==========================
 *.zip
+*.7z
+*.tar
+*.gz
+
+# ==========================
+# Virtual Environments
+# ==========================
+.venv/
+venv/
+env/
+ENV/
+*.env
+
+# ==========================
+# Logs / Temporary Files
+# ==========================
+*.log
+logs/
+tmp/
+temp/
+.DS_Store
+
+# ==========================
+# IDE / Editor Files
+# ==========================
+.vscode/
+.idea/
+*.iml
+*.swp
+
+# ==========================
+# Custom Project Folders
+# ==========================
+build/
+dist/
+output/
+assets/__pycache__/
+modules/__pycache__/
+modules/__pycache__/*.pyc
+# ==========================
+# OS Metadata
+# ==========================
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
 modules/antidebug.py
 modules/clients.py
 modules/meowing.py
-*.pyc
+__pycache__/
+*.py[cod]
