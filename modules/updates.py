@@ -1,25 +1,18 @@
 import requests
-import json
 import os
-import sys
 import time
 import zipfile
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Optional, Dict, Any
 from modules.clients import Colors
-import threading
 
 class UpdateManager:
-    def __init__(self, current_version: str = "2.0"):
+    def __init__(self, current_version: str = "2.3"):
         self.current_version = current_version
         self.update_url = "https://api.github.com/repos/ThatNotEasy/RiskYourLife-Macros/releases/latest"
         self.raw_url = "https://raw.githubusercontent.com/ThatNotEasy/RiskYourLife-Macros/main"
         self.download_path = Path("update_temp")
-        self.auto_update_enabled = True
-        self.check_interval = 3600  # Check every hour
-        self.last_check = 0
 
     def get_current_version(self) -> str:
         """Get current version from version.txt file"""
@@ -37,7 +30,7 @@ class UpdateManager:
         Returns update info dict if update available, None otherwise
         """
         try:
-            time.sleep(5)
+            time.sleep(0.030)
             response = requests.get(self.update_url, timeout=10)
             response.raise_for_status()
 
@@ -224,29 +217,7 @@ class UpdateManager:
 
         return True
 
-    def should_check_for_updates(self) -> bool:
-        """Check if enough time has passed since last update check"""
-        return (time.time() - self.last_check) > self.check_interval
 
-    def start_auto_update_thread(self):
-        """Start background thread for automatic update checking"""
-        def auto_check():
-            while self.auto_update_enabled:
-                try:
-                    if self.should_check_for_updates():
-                        update_info = self.check_for_updates()
-                        if update_info:
-                            print(f"[UPDATE] Update available! Version: {update_info['version']}")
-                            # Auto-update could be implemented here if desired
-                        self.last_check = time.time()
-                    time.sleep(300)  # Check every 5 minutes
-                except Exception as e:
-                    print(f"[UPDATE] Auto-check error: {e}")
-                    time.sleep(600)  # Wait 10 minutes on error
-
-        thread = threading.Thread(target=auto_check, daemon=True)
-        thread.start()
-        print(f"[UPDATE] Auto-update checker started")
 
 # Global update manager instance
 update_manager = UpdateManager()

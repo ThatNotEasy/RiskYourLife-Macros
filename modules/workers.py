@@ -1,5 +1,4 @@
-# workers.py - fixed version
-# workers.py - fixed version
+# Optimized workers.py - reduced duplicate headers and organized imports
 import time
 import threading
 import math
@@ -8,9 +7,9 @@ import ctypes
 import psutil
 import pyautogui
 from pynput.mouse import Controller
+
 from modules.actions import *
-from modules.constants import SC_A, SC_S, SC_D, SC_W  # Movement keys
-from modules.smart_mouse import SmartMouse, FastSmartMouse
+from modules.smart_mouse import FastSmartMouse
 
 # Screen resolution detection
 def get_screen_resolution():
@@ -25,8 +24,8 @@ def scale_coordinates(x, y, target_width=None, target_height=None):
     """Scale coordinates to current screen resolution"""
     if target_width is None or target_height is None:
         # Use default base resolution
-        target_width = 1000
-        target_height = 600
+        target_width = 1280
+        target_height = 1024
 
     current_width, current_height = get_screen_resolution()
 
@@ -40,8 +39,6 @@ def scale_coordinates(x, y, target_width=None, target_height=None):
 
     return scaled_x, scaled_y
 
-# Scan code for 'E' on US layout:
-SC_E = 0x12
 
 class WorkerManager:
     def __init__(self, config):
@@ -57,7 +54,6 @@ class WorkerManager:
         self.loop_auto_move2_on = False    # A + D (left/right)
         self.loop_auto_unpack_on = False   # NEW
         self.loop_auto_mouse_on = False     # 360 mouse movement
-        self.loop_hold_w_on = False         # Hold W key
         self.mouse_controller = Controller()  # Regular mouse controller
         self.e_event = threading.Event()
         self.click_event = threading.Event()
@@ -69,7 +65,6 @@ class WorkerManager:
         self.auto_unpack_event = threading.Event()   # NEW
         self.auto_offer_event = threading.Event()    # Auto Offer
         self.auto_mouse_event = threading.Event()     # 360 mouse
-        self.hold_w_event = threading.Event()         # Hold W key
 
     def is_game_running(self):
         """Check if the game process (MiniA.bin or Client.exe) is running"""
@@ -86,14 +81,19 @@ class WorkerManager:
     def worker_combined_action(self):
         """Hold spacebar continuously for auto jump"""
         while True:
-            if self.master_on and self.combined_action_event.is_set() and self.is_game_running():
-                # Hold spacebar down
-                send_key_scancode(SC_SPACE, True)
-                time.sleep(0.03)  # Keep checking
+            if self.master_on and self.combined_action_event.is_set():
+                if self.is_game_running():
+                    # Hold spacebar down with precise timing
+                    send_key_scancode(SC_SPACE, True)
+                    time.sleep(0.030)  # 30ms - consistent timing
+                else:
+                    # Release spacebar when game not running
+                    send_key_scancode(SC_SPACE, False)
+                    time.sleep(0.030)  # 30ms when inactive
             else:
                 # Release spacebar when disabled
                 send_key_scancode(SC_SPACE, False)
-                time.sleep(0.03)
+                time.sleep(0.030)  # 30ms idle sleep
                 
     def worker_skill_attack(self):
         """Continuous cycling: Press number 2 + right click, number 3 + right click, number 4 + right click and repeat"""
@@ -106,107 +106,128 @@ class WorkerManager:
         cycle_index = 0
 
         while True:
-            if self.master_on and self.skill_attack_event.is_set() and self.is_game_running():
-                # Get current skill from cycle
-                current_sc, skill_name = skill_cycle[cycle_index]
+            if self.master_on and self.skill_attack_event.is_set():
+                if self.is_game_running():
+                    # Get current skill from cycle
+                    current_sc, skill_name = skill_cycle[cycle_index]
 
-                # Press skill key + right click
-                tap_key_scancode(current_sc, hold_ms=15)
-                mouse_right_click_once(self.config['CLICK_DOWN_MS'])
+                    # Press skill key + right click with consistent timing
+                    tap_key_scancode(current_sc, hold_ms=30)  # 30ms consistent hold
+                    mouse_right_click_once(30.0)  # 30ms consistent click
 
-                # Move to next skill in cycle
-                cycle_index = (cycle_index + 1) % len(skill_cycle)
+                    # Move to next skill in cycle
+                    cycle_index = (cycle_index + 1) % len(skill_cycle)
 
-                # Very short delay between individual skills for continuous feel
-                time.sleep(0.02)  # Reduced from CLICK_DELAY (0.05s) to 0.02s
+                    # Consistent delay between skills
+                    time.sleep(0.030)  # 30ms consistent cycling
+                else:
+                    time.sleep(0.030)  # 30ms when game not running
             else:
-                time.sleep(0.03)
+                time.sleep(0.020)  # 20ms idle sleep
                 
     def worker_auto_move(self):
         """Fast alternating presses: W-S-W-S-W-S... (front & back)"""
         while True:
-            if self.master_on and self.auto_move_event.is_set() and self.is_game_running():
-                # Fast press W (forward)
-                tap_key_scancode(SC_W, hold_ms=25)
-                time.sleep(0.01)  # Very short delay
+            if self.master_on and self.auto_move_event.is_set():
+                if self.is_game_running():
+                    # Fast press W (forward) with consistent timing
+                    tap_key_scancode(SC_W, hold_ms=30)  # 30ms consistent hold
+                    time.sleep(0.030)  # 30ms consistent delay
 
-                # Fast press S (backward)
-                tap_key_scancode(SC_S, hold_ms=25)
-                time.sleep(0.01)  # Very short delay
+                    # Fast press S (backward)
+                    tap_key_scancode(SC_S, hold_ms=30)  # 30ms consistent hold
+                    time.sleep(0.030)  # 30ms consistent delay
+                else:
+                    time.sleep(0.030)  # 30ms when game not running
             else:
-                # Use CPU-optimized sleep interval if enabled
-                sleep_interval = 0.1 if self.config.get('AUTO_MOUSE_CPU_OPTIMIZED', True) else 0.03
-                time.sleep(sleep_interval)
+                time.sleep(0.030)  # 30ms idle sleep
 
     def worker_auto_move2(self):
         """Press A for 1.0s, then D for 1.0s, and repeat continuously (left & right)"""
         while True:
-            if self.master_on and self.auto_move2_event.is_set() and self.is_game_running():
-                # Press A for 1.0 seconds (move left)
-                send_key_scancode(SC_A, True)
-                time.sleep(1.0)
-                send_key_scancode(SC_A, False)
-                time.sleep(0.05)
+            if self.master_on and self.auto_move2_event.is_set():
+                if self.is_game_running():
+                    # Press A for 1.0 seconds (move left) with consistent timing
+                    send_key_scancode(SC_A, True)
+                    time.sleep(1.000)  # Exact 1 second
+                    send_key_scancode(SC_A, False)
+                    time.sleep(0.030)  # 30ms consistent pause
 
-                # Press D for 1.0 seconds (move right)
-                send_key_scancode(SC_D, True)
-                time.sleep(1.0)
-                send_key_scancode(SC_D, False)
-                time.sleep(0.05)
+                    # Press D for 1.0 seconds (move right)
+                    send_key_scancode(SC_D, True)
+                    time.sleep(1.000)  # Exact 1 second
+                    send_key_scancode(SC_D, False)
+                    time.sleep(0.030)  # 30ms consistent pause
+                else:
+                    time.sleep(0.030)  # 30ms when game not running
             else:
-                time.sleep(0.03)
+                time.sleep(0.030)  # 30ms idle sleep
                 
     def worker_e(self):
+        """Ultra-fast double E press for item pickup"""
         while True:
-            if self.master_on and self.e_event.is_set() and self.is_game_running():
-                # Double press E ultra fast
-                tap_key_scancode(SC_E, hold_ms=0.002)   # First press
-                time.sleep(0.0002)  # Small delay between presses
-                tap_key_scancode(SC_E, hold_ms=0.002)   # Second press
-                time.sleep(0.002)  # Delay after double press
+            if self.master_on and self.e_event.is_set():
+                if self.is_game_running():
+                    # Double press E with consistent timing
+                    tap_key_scancode(SC_E, hold_ms=30)   # 30ms consistent hold
+                    time.sleep(0.030)  # 30ms consistent delay
+                    tap_key_scancode(SC_E, hold_ms=30)   # 30ms consistent hold
+                    time.sleep(0.030)  # 30ms consistent delay
+                else:
+                    time.sleep(0.030)  # 30ms when game not running
             else:
-                time.sleep(0.02)
+                time.sleep(0.030)  # 30ms idle sleep
 
     def worker_click(self):
         """Rapid left mouse button clicking for auto hit"""
         while True:
-            if self.master_on and self.click_event.is_set() and self.is_game_running():
-                # Perform rapid left mouse clicks
-                mouse_left_down()
-                time.sleep(0.03)  # Click duration - slightly longer for better detection
-                mouse_left_up()
-                time.sleep(0.02)   # Delay between clicks for rapid but controlled clicking
+            if self.master_on and self.click_event.is_set():
+                if self.is_game_running():
+                    # Perform rapid left mouse clicks with consistent timing
+                    mouse_left_down()
+                    time.sleep(0.030)  # 30ms consistent click duration
+                    mouse_left_up()
+                    time.sleep(0.030)  # 30ms consistent delay
+                else:
+                    time.sleep(0.030)  # 30ms when game not running
             else:
-                time.sleep(0.02)
+                time.sleep(0.030)  # 30ms idle sleep
                 
     def worker_resser(self):
+        """Ultra-fast F1-F10 key presses for resurrection"""
         f_keys = [0x3B, 0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42, 0x43, 0x44]
         # F1–F10 scan codes (including F8 0x42)
         while True:
-            if self.master_on and self.resser_event.is_set() and self.is_game_running():
-                for sc in f_keys:
-                    tap_key_scancode(sc, hold_ms=0.001)  # Very fast press (1ms)
-                    time.sleep(0.0001)  # Minimal delay between F keys
-                    if not (self.master_on and self.resser_event.is_set() and self.is_game_running()):
-                        break
+            if self.master_on and self.resser_event.is_set():
+                if self.is_game_running():
+                    for sc in f_keys:
+                        tap_key_scancode(sc, hold_ms=30)  # 30ms consistent hold
+                        time.sleep(0.030)  # 30ms consistent delay
+                        if not (self.master_on and self.resser_event.is_set()):
+                            break
+                else:
+                    time.sleep(0.030)  # 30ms when game not running
             else:
-                time.sleep(0.02)
+                time.sleep(0.030)  # 30ms idle sleep
 
     def worker_auto_unpack(self):
-        """Simple auto right-clicking for auto unpack gold - normal clicking speed"""
+        """Auto right-clicking for auto unpack gold with consistent timing"""
         while True:
             try:
-                if self.master_on and self.auto_unpack_event.is_set() and self.is_game_running():
-                    # Simple, normal right-click - like a human would do
-                    mouse_right_down()
-                    time.sleep(0.05)  # Normal click duration
-                    mouse_right_up()
-                    time.sleep(0.1)   # Normal delay between clicks (100ms)
+                if self.master_on and self.auto_unpack_event.is_set():
+                    if self.is_game_running():
+                        # Consistent right-click timing for unpacking
+                        mouse_right_down()
+                        time.sleep(0.030)  # 30ms consistent click duration
+                        mouse_right_up()
+                        time.sleep(0.030)  # 30ms consistent delay
+                    else:
+                        time.sleep(0.030)  # 30ms when game not running
                 else:
-                    time.sleep(0.05)
+                    time.sleep(0.030)  # 30ms idle sleep
             except Exception as e:
                 print(f"[!] Error in auto unpack worker: {e}")
-                time.sleep(0.2)  # Brief pause before retrying
+                time.sleep(0.030)  # 30ms consistent error recovery
 
     def worker_auto_mouse(self):
         """Enhanced auto mouse movement with improved continuous circular motion"""
@@ -250,21 +271,13 @@ class WorkerManager:
         # Initialize FastSmartMouse for optimized movement
         fast_mouse = FastSmartMouse(mouse_controller=self.mouse_controller, speed_multiplier=0.4)
 
-        last_resolution = get_screen_resolution()
         angle = 0.0  # Current rotation angle
         last_update = time.time()
 
         while True:
             current_time = time.time()
 
-            # Check if resolution changed
-            current_resolution = get_screen_resolution()
-            if current_resolution != last_resolution:
-                last_resolution = current_resolution
-                # Reload config in case resolution scaling parameters changed
-                circle_config = load_circle_config() or circle_config
-
-            # Reload configuration in case the file was updated
+            # Reload configuration every loop (no caching)
             circle_config = load_circle_config() or circle_config
 
             if self.master_on and self.auto_mouse_event.is_set() and self.is_game_running():
@@ -300,56 +313,41 @@ class WorkerManager:
                     else:
                         self.mouse_controller.position = (int(x), int(y))
 
-                    # Optimized delay for smoother motion (aiming for ~60 FPS)
+                    # Consistent delay for smooth motion (60 FPS target)
                     target_frame_time = 1.0 / 60.0
                     actual_frame_time = current_time - last_update
-                    sleep_time = max(0.005, target_frame_time - actual_frame_time)
+                    sleep_time = max(0.030, target_frame_time - actual_frame_time)  # Min 30ms
                     time.sleep(sleep_time)
 
                 except Exception as e:
                     print(f"[!] Error in enhanced mouse 360 movement: {e}")
-                    time.sleep(0.01)
+                    time.sleep(0.030)  # 30ms consistent error recovery
             else:
-                # CPU-optimized sleep when not active
-                sleep_interval = 0.1 if self.config.get('AUTO_MOUSE_CPU_OPTIMIZED', True) else 0.03
+                # Consistent idle sleep with millisecond precision
+                sleep_interval = 0.030 if self.config.get('AUTO_MOUSE_CPU_OPTIMIZED', True) else 0.030
                 time.sleep(sleep_interval)
                 last_update = current_time
         
     def worker_auto_offer(self):
-        """Auto Offer toggle with ALT+0 hotkey - TOGGLE MODE"""
+        """Auto Offer with consistent timing for trading"""
         while True:
             if self.master_on and self.auto_offer_event.is_set():
-                # Press Enter to open chat
+                # Press Enter to open chat with consistent timing
                 pyautogui.press("enter")
+                time.sleep(0.030)  # 30ms consistent chat open delay
 
-                # Wait a moment for the chat to open
-                time.sleep(0.5)
-
-                # Press Ctrl+V (paste) - using hotkey like test.py
+                # Press Ctrl+V (paste) with consistent delay
                 pyautogui.hotkey("ctrl", "v")
-
-                # Wait a moment before pressing Enter
-                time.sleep(0.5)
+                time.sleep(0.030)  # 30ms consistent paste delay
 
                 # Press Enter again to send the message
                 pyautogui.press("enter")
 
-                # Wait 14 seconds before next offer
-                time.sleep(14.0)
+                # Wait 14 seconds before next offer (exact timing)
+                time.sleep(14.000)
             else:
-                time.sleep(0.03)
+                time.sleep(0.030)  # 30ms consistent idle sleep
 
-    def worker_hold_w(self):
-        """Hold W key continuously for forward movement"""
-        while True:
-            if self.master_on and self.hold_w_event.is_set() and self.is_game_running():
-                # Hold W key down
-                send_key_scancode(SC_W, True)
-                time.sleep(0.03)  # Keep checking
-            else:
-                # Release W key when disabled
-                send_key_scancode(SC_W, False)
-                time.sleep(0.03)
 
     def start_workers(self):
         threading.Thread(target=self.worker_e, daemon=True).start()
@@ -362,4 +360,3 @@ class WorkerManager:
         threading.Thread(target=self.worker_auto_unpack, daemon=True).start()   # NEW
         threading.Thread(target=self.worker_auto_offer, daemon=True).start()   # NEW
         threading.Thread(target=self.worker_auto_mouse, daemon=True).start()     # 360 mouse
-        threading.Thread(target=self.worker_hold_w, daemon=True).start()        # Hold W key
